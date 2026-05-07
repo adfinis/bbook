@@ -1,0 +1,40 @@
+FROM node:24.11.1-alpine3.21@sha256:b8f7c9056af700568c1ce76173f1c93743fb64ca1343e18cdf3a6ded8985ad3d AS deps
+
+RUN npm install -g pnpm@10.28.0
+
+WORKDIR /app
+COPY bbook-frontend/package.json bbook-frontend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+
+FROM node:24.11.1-alpine3.21@sha256:b8f7c9056af700568c1ce76173f1c93743fb64ca1343e18cdf3a6ded8985ad3d AS build
+
+RUN npm install -g pnpm@10.28.0
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY bbook-frontend/ ./
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN pnpm build
+
+
+FROM node:24.11.1-alpine3.21@sha256:b8f7c9056af700568c1ce76173f1c93743fb64ca1343e18cdf3a6ded8985ad3d
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+COPY --from=build /app/.next/standalone ./
+COPY --from=build /app/.next/static ./.next/static
+COPY --from=build /app/public ./public
+
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]

@@ -1,0 +1,94 @@
+name: "bbook-dev"
+
+networks:
+  bbook-internal:
+    external: false
+
+services:
+  bbook-caddy:
+    container_name: bbook-caddy
+    image: caddy:2.11.2@sha256:25cdc846626b62d05f6b633b9b40c2c9f6ef89b515dc76133cefd920f7dbe562
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    networks:
+      - bbook-internal
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./data/Caddy/caddy_data:/data
+      - ./data/Caddy/caddy_config:/config
+      - /etc/timezone:/etc/timezone
+      - /etc/localtime:/etc/localtime
+    env_file:
+      - .env
+
+  bbook-backend:
+    container_name: bbook-backend
+    build:
+      context: ../bbook-backend
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    networks:
+      - bbook-internal
+    command: ["air"]
+    volumes:
+      - ../bbook-backend:/app
+      - /etc/timezone:/etc/timezone
+      - /etc/localtime:/etc/localtime
+    env_file:
+      - .env
+      - .db.env
+      - .backend.env
+    depends_on:
+      bbook-db:
+        condition: service_healthy
+
+  bbook-db:
+    container_name: bbook-db
+    image: postgres:18.3@sha256:78481659c47e862334611ccdaf7c369c986b3046da9857112f3b309114a65fb4
+    restart: unless-stopped
+    networks:
+      - bbook-internal
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres/:/var/lib/postgresql/
+      - /etc/timezone:/etc/timezone
+      - /etc/localtime:/etc/localtime
+    env_file:
+      - .db.env
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "psql -U $$POSTGRES_USER -d $$POSTGRES_DB -c 'SELECT 1' || exit 1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  bbook-frontend:
+    container_name: bbook-frontend
+    build:
+      context: ../bbook-frontend
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    networks:
+      - bbook-internal
+    environment:
+      - CI=true
+    volumes:
+      - ../bbook-frontend:/app
+      # make sure we shadow node_modules and .next to avoid conflicts with the host
+      - /app/node_modules
+      - /app/.next
+
+      - /etc/timezone:/etc/timezone
+      - /etc/localtime:/etc/localtime
+    working_dir: /app
+    command: /bin/sh -c "pnpm install && pnpm dev"

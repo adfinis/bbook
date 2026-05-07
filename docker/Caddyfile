@@ -1,0 +1,18 @@
+{
+  email albert.cerfeda@adfinis.com
+}
+
+www.app.vsos.ethz.ch app.vsos.ethz.ch {
+	redir {$BBOOK_SCHEME}://{$BBOOK_HOSTNAME}
+}
+
+{$BBOOK_SCHEME}://{$BBOOK_HOSTNAME} {$BBOOK_SCHEME}://www.{$BBOOK_HOSTNAME} {
+	log {
+    output file /var/log/caddy/caddy.log
+    level DEBUG
+  }
+
+  reverse_proxy /api/* http://bbook-backend:8081
+
+  reverse_proxy http://bbook-frontend:3000
+}
