@@ -11,6 +11,12 @@ type config struct {
 	PostgresUser     string
 	PostgresPassword string
 	PostgresDB       string
+
+	ZohoClientID     string
+	ZohoClientSecret string
+	ZohoRefreshToken string
+	ZohoBaseURL      string
+	ZohoAccountsURL  string
 }
 
 func parse() config {
@@ -20,6 +26,12 @@ func parse() config {
 	c.PostgresUser = os.Getenv("POSTGRES_USER")
 	c.PostgresPassword = os.Getenv("POSTGRES_PASSWORD")
 	c.PostgresDB = os.Getenv("POSTGRES_DB")
+
+	c.ZohoClientID = os.Getenv("ZOHO_CLIENT_ID")
+	c.ZohoClientSecret = os.Getenv("ZOHO_CLIENT_SECRET")
+	c.ZohoRefreshToken = os.Getenv("ZOHO_REFRESH_TOKEN")
+	c.ZohoBaseURL = os.Getenv("ZOHO_BASE_URL")
+	c.ZohoAccountsURL = os.Getenv("ZOHO_ACCOUNTS_URL")
 
 	return c
 }
