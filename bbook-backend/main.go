@@ -5,13 +5,20 @@ import (
 	"log"
 	"os"
 
-	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/config"
 	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/server"
+	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/storage"
 	"github.com/urfave/cli/v3"
 )
 
 func main() {
-	cfg := config.Load()
+
+	store, err := storage.Init()
+	if err != nil {
+		log.Fatalf("storage: %w", err)
+	}
+	defer store.Close()
+
+
 
 	cmd := &cli.Command{
 		Name:                  "bbook-backend",
@@ -22,7 +29,7 @@ func main() {
 				Name:        "server",
 				Description: "Start the HTTP server",
 				Action: func(ctx context.Context, _ *cli.Command) error {
-					return server.Start(ctx, cfg)
+					return server.Start(ctx)
 				},
 			},
 		},

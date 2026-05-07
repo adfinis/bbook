@@ -2,7 +2,9 @@ package config
 
 import "os"
 
-type Config struct {
+var AppConfig config = parse()
+
+type config struct {
 	Env string
 
 	PostgresHost     string
@@ -11,12 +13,13 @@ type Config struct {
 	PostgresDB       string
 }
 
-func Load() *Config {
-	return &Config{
-		Env:              os.Getenv("ENV"),
-		PostgresHost:     os.Getenv("POSTGRES_HOST"),
-		PostgresUser:     os.Getenv("POSTGRES_USER"),
-		PostgresPassword: os.Getenv("POSTGRES_PASSWORD"),
-		PostgresDB:       os.Getenv("POSTGRES_DB"),
-	}
+func parse() config {
+	c := config{}
+	c.Env = os.Getenv("ENV")
+	c.PostgresHost = os.Getenv("POSTGRES_HOST")
+	c.PostgresUser = os.Getenv("POSTGRES_USER")
+	c.PostgresPassword = os.Getenv("POSTGRES_PASSWORD")
+	c.PostgresDB = os.Getenv("POSTGRES_DB")
+
+	return c
 }

@@ -2,26 +2,18 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/config"
 	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/router"
-	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/storage"
 )
 
 const addr = ":8081"
 
-func Start(ctx context.Context, cfg *config.Config) error {
-	store, err := storage.Init(cfg)
-	if err != nil {
-		return fmt.Errorf("storage: %w", err)
-	}
-	defer store.Close()
+func Start(ctx context.Context) error {
 
 	srv := &http.Server{
 		Handler:      router.Router(),

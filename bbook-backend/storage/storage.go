@@ -8,26 +8,31 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type Storage struct {
+type storage struct {
 	DB *sql.DB
 }
 
-func Init(cfg *config.Config) (*Storage, error) {
+var client storage = storage{}
+
+
+
+func Init() (*storage, error) {
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s/%s?sslmode=disable",
-		cfg.PostgresUser, cfg.PostgresPassword, cfg.PostgresHost, cfg.PostgresDB,
+		config.AppConfig.PostgresUser, config.AppConfig.PostgresPassword, config.AppConfig.PostgresHost, config.AppConfig.PostgresDB,
 	)
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		return nil, fmt.Errorf("open postgres: %w", err)
+		return nil, fmt.Errorf("postgres error: open: %w", err)
 	}
 	if err := db.Ping(); err != nil {
 		db.Close()
-		return nil, fmt.Errorf("ping postgres: %w", err)
+		return nil, fmt.Errorf("postgres error: ping: %w", err)
 	}
-	return &Storage{DB: db}, nil
+	client.DB = db
+	return &client, nil
 }
 
-func (s *Storage) Close() error {
+func (s *storage) Close() error {
 	return s.DB.Close()
 }
