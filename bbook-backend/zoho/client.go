@@ -11,13 +11,13 @@ import (
 	"time"
 
 	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/config"
+	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/database"
 )
 
 var client zohoHTTPClient = zohoHTTPClient{}
 
-
 type zohoHTTPClient struct {
-	httpClient *http.Client
+	httpClient  *http.Client
 	accessToken string
 	expiry      time.Time
 }
@@ -45,7 +45,7 @@ func token(ctx context.Context) (string, error) {
 	endpoint := config.AppConfig.ZohoAccountsURL + "/oauth/v2/token"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("refreshing zoho access token: build request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
@@ -79,14 +79,9 @@ type tokenResponse struct {
 	ExpiresIn   int    `json:"expires_in"`
 }
 
-
-
-
-
-
 // Fetches all contacts from Zoho
-func FetchContacts(ctx context.Context) ([]Contact, error) {
-	var all []Contact
+func FetchContacts(ctx context.Context) ([]database.Contact, error) {
+	var all []database.Contact
 
 	for pageNum := 1; ; pageNum++ {
 		page, err := fetchPage(ctx, pageNum)
@@ -96,8 +91,12 @@ func FetchContacts(ctx context.Context) ([]Contact, error) {
 		if page == nil {
 			break
 		}
-		for _, r := range page.Data {
-			all = append(all, r.toContact())
+		for _, raw := range page.Data {
+			var rc rawZohoContact
+			if err := json.Unmarshal(raw, &rc); err != nil {
+				return nil, fmt.Errorf("fetching zoho contacts page %d: decode contact: %w", pageNum, err)
+			}
+			all = append(all, rc.toContact(raw))
 		}
 		if !page.Info.MoreRecords {
 			break
@@ -116,7 +115,7 @@ func fetchPage(ctx context.Context, pageNum int) (*contactsPage, error) {
 	u := fmt.Sprintf("%s/crm/v2/Contacts?page=%d", config.AppConfig.ZohoBaseURL, pageNum)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fetching zoho contacts page %d: build request: %w", pageNum, err)
 	}
 	req.Header.Set("Authorization", "Zoho-oauthtoken "+token)
 
@@ -136,14 +135,13 @@ func fetchPage(ctx context.Context, pageNum int) (*contactsPage, error) {
 
 	var page contactsPage
 	if err := json.NewDecoder(resp.Body).Decode(&page); err != nil {
-		return nil, fmt.Errorf("fetching zoho contacts page %d: decode contacts: %w", pageNum, err)
+		return nil, fmt.Errorf("fetching zoho contacts page %d: decode page: %w", pageNum, err)
 	}
 	return &page, nil
 }
 
-
 type contactsPage struct {
-	Data []rawZohoContact `json:"data"`
+	Data []json.RawMessage `json:"data"`
 	Info struct {
 		MoreRecords bool `json:"more_records"`
 	} `json:"info"`
@@ -168,23 +166,24 @@ type account struct {
 	Name string `json:"name"`
 }
 
-func (r rawZohoContact) toContact() Contact {
+func (r rawZohoContact) toContact(raw json.RawMessage) database.Contact {
 	org := ""
 	if r.AccountName != nil {
 		org = r.AccountName.Name
 	}
-	return Contact{
-		ID:           r.ID,
+	return database.Contact{
+		ZohoID:       r.ID,
 		FirstName:    r.FirstName,
 		LastName:     r.LastName,
+		Organization: org,
 		Email:        r.Email,
 		Phone:        r.Phone,
 		Mobile:       r.Mobile,
-		Organization: org,
 		Street:       r.MailingStreet,
 		City:         r.MailingCity,
 		PostalCode:   r.MailingZip,
 		Status:       r.Status,
 		ModifiedTime: r.ModifiedTime,
+		Raw:          raw,
 	}
 }

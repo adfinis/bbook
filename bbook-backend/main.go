@@ -5,19 +5,19 @@ import (
 	"log"
 	"os"
 
+	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/database"
 	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/server"
-	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/storage"
 	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/zoho"
 	"github.com/urfave/cli/v3"
 )
 
 func main() {
 
-	store, err := storage.Init()
+	err := database.Init()
 	if err != nil {
-		log.Fatalf("storage: %w", err)
+		log.Fatalf("database: %v", err)
 	}
-	defer store.Close()
+	defer database.Client.DB.Close()
 
 	if err := zoho.Init(); err != nil {
 		log.Fatalf("zoho: %v", err)
@@ -25,11 +25,24 @@ func main() {
 
 
 	// Test
-	c, err := zoho.FetchContacts(context.Background())
+	ctx := context.Background()
+	// contacts, err := zoho.FetchContacts(ctx)
+	// if err != nil {
+	// 	log.Fatalf("zoho: %v", err)
+	// }
+	// syncedAt := time.Now()
+	// for _, c := range contacts {
+	// 	c.SyncedAt = syncedAt
+	// 	if err := database.Client.Queries.UpsertContact(ctx, database.UpsertContactParams(c)); err != nil {
+	// 		log.Fatalf("upsert: %v", err)
+	// 	}
+	// }
+	// log.Printf("fetched %d contacts", len(contacts))
+	stored, err := database.Client.Queries.AllContacts(ctx)
 	if err != nil {
-		log.Fatalf("zoho: %v", err)
+		log.Fatalf("read back: %v", err)
 	}
-	log.Printf("Fetched %d contacts from Zoho", len(c))
+	log.Printf("stored %d contacts", len(stored))
 
 
 
