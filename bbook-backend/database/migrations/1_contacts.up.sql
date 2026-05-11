@@ -11,6 +11,5 @@ CREATE TABLE contacts (
     postal_code   TEXT NOT NULL,
     status        TEXT NOT NULL,
     modified_time TIMESTAMPTZ NOT NULL,
-    raw           JSONB NOT NULL,
-    synced_at     TIMESTAMPTZ NOT NULL
+    raw           JSONB NOT NULL
 );

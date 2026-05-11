@@ -23,5 +23,4 @@ type Contact struct {
 	Status       string
 	ModifiedTime time.Time
 	Raw          json.RawMessage
-	SyncedAt     time.Time
 }

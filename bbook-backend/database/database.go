@@ -19,7 +19,7 @@ type database struct {
 
 var Client database = database{}
 
-func Init() (error) {
+func Init() error {
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s/%s?sslmode=disable",
 		config.AppConfig.PostgresUser, config.AppConfig.PostgresPassword,

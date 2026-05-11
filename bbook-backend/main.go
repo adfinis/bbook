@@ -23,9 +23,8 @@ func main() {
 		log.Fatalf("zoho: %v", err)
 	}
 
-
 	// Test
-	ctx := context.Background()
+	// ctx := context.Background()
 	// contacts, err := zoho.FetchContacts(ctx)
 	// if err != nil {
 	// 	log.Fatalf("zoho: %v", err)
@@ -38,13 +37,26 @@ func main() {
 	// 	}
 	// }
 	// log.Printf("fetched %d contacts", len(contacts))
-	stored, err := database.Client.Queries.AllContacts(ctx)
-	if err != nil {
-		log.Fatalf("read back: %v", err)
-	}
-	log.Printf("stored %d contacts", len(stored))
+	// stored, err := database.Client.Queries.AllContacts(ctx)
+	// if err != nil {
+	// 	log.Fatalf("read back: %v", err)
+	// }
+	// log.Printf("stored %d contacts", len(stored))
 
-
+	// ratelimit, err := zoho.FetchRateLimit(ctx)
+	// if err != nil {
+	// 	log.Fatalf("zoho: %v", err)
+	// }
+	// fmt.Println(ratelimit.Limit, ratelimit.Remaining, ratelimit.ResetAt)
+	//
+	//
+	// contacts, err := zoho.FetchContacts(context.Background())
+	// if err != nil {
+	// 	log.Fatalf("zoho: %v", err)
+	// }
+	// log.Println("Success", len(contacts), "contacts fetched")
+	// b, _ := json.MarshalIndent(contacts[0], "", "  ")
+	// fmt.Println(string(b))
 
 	cmd := &cli.Command{
 		Name:                  "bbook-backend",

@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 	"time"
 
@@ -26,7 +28,6 @@ func Init() error {
 	client.httpClient = &http.Client{Timeout: 30 * time.Second}
 	return nil
 }
-
 
 // Returns (and refreshes if necessary) the access token
 func token(ctx context.Context) (string, error) {
@@ -61,7 +62,11 @@ func token(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("refreshing zoho access token: status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
-	var tr tokenResponse
+	var tr struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int    `json:"expires_in"`
+	}
+
 	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
 		return "", fmt.Errorf("refreshing zoho access token: decode response: %w", err)
 	}
@@ -74,99 +79,149 @@ func token(ctx context.Context) (string, error) {
 	return client.accessToken, nil
 }
 
-type tokenResponse struct {
-	AccessToken string `json:"access_token"`
-	ExpiresIn   int    `json:"expires_in"`
-}
 
 // Fetches all contacts from Zoho
 func FetchContacts(ctx context.Context) ([]database.Contact, error) {
 	var all []database.Contact
 
-	for pageNum := 1; ; pageNum++ {
-		page, err := fetchPage(ctx, pageNum)
-		if err != nil {
-			return nil, err
-		}
-		if page == nil {
-			break
-		}
-		for _, raw := range page.Data {
-			var rc rawZohoContact
-			if err := json.Unmarshal(raw, &rc); err != nil {
-				return nil, fmt.Errorf("fetching zoho contacts page %d: decode contact: %w", pageNum, err)
-			}
-			all = append(all, rc.toContact(raw))
-		}
-		if !page.Info.MoreRecords {
-			break
-		}
+	rawContacts, err := fetchContactsV8(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("fetching zoho contacts: %w", err)
+	}
+	for _, rc := range *rawContacts {
+		all = append(all, rc.toContact())
 	}
 
 	return all, nil
 }
 
-func fetchPage(ctx context.Context, pageNum int) (*contactsPage, error) {
-	token, err := token(ctx)
-	if err != nil {
-		return nil, err
-	}
+// https://www.zoho.com/crm/developer/docs/api/v8/get-records.html
+func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
+	var prevPage rawContactsPage
+	res := &[]rawZohoContact{}
+	for pageNum := 1; ; pageNum++ {
+		u := fmt.Sprintf("%s/crm/v8/Contacts?fields=%s", config.AppConfig.ZohoBaseURL, contactFields)
+		if pageNum == 1 {
+			u += fmt.Sprintf("&page=%d", pageNum)
+		} else {
+			// We use page_token for retrieving any subsequent page after the first one
+			u += "&page_token=" + url.QueryEscape(prevPage.Info.NextPageToken)
+		}
+		// fmt.Println(u)
 
-	u := fmt.Sprintf("%s/crm/v2/Contacts?page=%d", config.AppConfig.ZohoBaseURL, pageNum)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
-	if err != nil {
-		return nil, fmt.Errorf("fetching zoho contacts page %d: build request: %w", pageNum, err)
-	}
-	req.Header.Set("Authorization", "Zoho-oauthtoken "+token)
+		req, err := buildZohoRequest(ctx, http.MethodGet, u, nil)
+		if err != nil {
+			return nil, fmt.Errorf("fetching zoho contacts page %d: %w", pageNum, err)
+		}
 
-	resp, err := client.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("fetching zoho contacts page %d: %w", pageNum, err)
-	}
-	defer resp.Body.Close()
+		resp, err := client.httpClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("fetching zoho contacts page %d: %w", pageNum, err)
+		}
+		defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusNoContent {
-		return nil, nil
-	}
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("fetching zoho contacts page %d: status %d: %s", pageNum, resp.StatusCode, strings.TrimSpace(string(body)))
-	}
+		// No more content
+		if resp.StatusCode == http.StatusNoContent {
+			return res, nil
+		}
+		// Any other issue
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			return nil, fmt.Errorf("fetching zoho contacts page %d: status %d: %s", pageNum, resp.StatusCode, strings.TrimSpace(string(body)))
+		}
 
-	var page contactsPage
-	if err := json.NewDecoder(resp.Body).Decode(&page); err != nil {
-		return nil, fmt.Errorf("fetching zoho contacts page %d: decode page: %w", pageNum, err)
+		var page rawContactsPage
+		if err := json.NewDecoder(resp.Body).Decode(&page); err != nil {
+			return nil, fmt.Errorf("fetching zoho contacts page %d: decode page: %w", pageNum, err)
+		}
+
+		log.Printf("fetched %d contacts for page %d", len(page.Data), pageNum)
+		for _, raw := range page.Data {
+			var rc rawZohoContact
+			if err := json.Unmarshal(raw, &rc); err != nil {
+				return nil, fmt.Errorf("fetching zoho contacts page %d: decode contact: %w", pageNum, err)
+			}
+			*res = append(*res, rc)
+		}
+		if !page.Info.MoreRecords {
+			break
+		}
+		prevPage = page
 	}
-	return &page, nil
+	return res, nil
 }
 
-type contactsPage struct {
+func buildZohoRequest(ctx context.Context, method string, url string, body io.Reader) (*http.Request, error) {
+	token, err := token(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Authorization", "Zoho-oauthtoken "+token)
+	return req, nil
+}
+
+// Generated comma-separated list of JSON field names for rawZohoContact. When fetching contacts from Zoho, we only request these fields.
+var contactFields = buildJSONFields(reflect.TypeFor[rawZohoContact]())
+
+func buildJSONFields(t reflect.Type) string {
+	var names []string
+	for i := 0; i < t.NumField(); i++ {
+		tag := t.Field(i).Tag.Get("json")
+		if idx := strings.Index(tag, ","); idx >= 0 {
+			tag = tag[:idx]
+		}
+		if tag == "" || tag == "-" || tag == "id" {
+			continue // skip untagged, ignored
+		}
+		names = append(names, tag)
+	}
+	return strings.Join(names, ",")
+}
+
+type rawContactsPage struct {
 	Data []json.RawMessage `json:"data"`
 	Info struct {
-		MoreRecords bool `json:"more_records"`
+		MoreRecords   bool   `json:"more_records"`
+		NextPageToken string `json:"next_page_token"`
 	} `json:"info"`
 }
 
 type rawZohoContact struct {
-	ID            string    `json:"id"`
-	FirstName     string    `json:"First_Name"`
-	LastName      string    `json:"Last_Name"`
-	Email         string    `json:"Email"`
-	Phone         string    `json:"Phone"`
-	Mobile        string    `json:"Mobile"`
-	AccountName   *account  `json:"Account_Name"`
-	MailingStreet string    `json:"Mailing_Street"`
-	MailingCity   string    `json:"Mailing_City"`
-	MailingZip    string    `json:"Mailing_Zip"`
-	Status        string    `json:"Contact_Status"`
-	ModifiedTime  time.Time `json:"Modified_Time"`
+	ID          string `json:"id"`
+	FirstName   string `json:"First_Name"`
+	LastName    string `json:"Last_Name"`
+	Email       string `json:"Email"`
+	Phone       string `json:"Phone"`
+	Mobile      string `json:"Mobile"`
+	AccountName *struct {
+		Name string `json:"name"`
+		Id   string `json:"id"`
+	} `json:"Account_Name"`
+	MailingStreet string          `json:"Mailing_Street"`
+	MailingCity   string          `json:"Mailing_City"`
+	MailingZip    string          `json:"Mailing_Zip"`
+	Status        string          `json:"Contact_Status"`
+	ModifiedTime  time.Time       `json:"Modified_Time"`
+	Raw           json.RawMessage `json:"-"`
 }
 
-type account struct {
-	Name string `json:"name"`
+func (r *rawZohoContact) UnmarshalJSON(data []byte) error {
+	type alias rawZohoContact
+	var a alias
+	if err := json.Unmarshal(data, &a); err != nil {
+		return err
+	}
+	*r = rawZohoContact(a)
+	r.Raw = data
+	return nil
 }
 
-func (r rawZohoContact) toContact(raw json.RawMessage) database.Contact {
+func (r rawZohoContact) toContact() database.Contact {
 	org := ""
 	if r.AccountName != nil {
 		org = r.AccountName.Name
@@ -184,6 +239,6 @@ func (r rawZohoContact) toContact(raw json.RawMessage) database.Contact {
 		PostalCode:   r.MailingZip,
 		Status:       r.Status,
 		ModifiedTime: r.ModifiedTime,
-		Raw:          raw,
+		Raw:          r.Raw,
 	}
 }
