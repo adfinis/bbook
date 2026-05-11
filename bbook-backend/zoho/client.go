@@ -99,7 +99,8 @@ func FetchContacts(ctx context.Context) ([]database.Contact, error) {
 func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
 	var prevPage rawContactsPage
 	res := &[]rawZohoContact{}
-	for pageNum := 1; ; pageNum++ {
+	pageNum := 1
+	for ; ; pageNum++ {
 		u := fmt.Sprintf("%s/crm/v8/Contacts?fields=%s", config.AppConfig.ZohoBaseURL, contactFields)
 		if pageNum == 1 {
 			u += fmt.Sprintf("&page=%d", pageNum)
@@ -135,7 +136,7 @@ func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
 			return nil, fmt.Errorf("fetching zoho contacts page %d: decode page: %w", pageNum, err)
 		}
 
-		log.Printf("fetched %d contacts for page %d", len(page.Data), pageNum)
+		// log.Printf("fetched %d contacts for page %d", len(page.Data), pageNum)
 		for _, raw := range page.Data {
 			var rc rawZohoContact
 			if err := json.Unmarshal(raw, &rc); err != nil {
@@ -148,6 +149,7 @@ func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
 		}
 		prevPage = page
 	}
+	log.Printf("fetched %d contacts in %d pages", len(*res), pageNum)
 	return res, nil
 }
 

@@ -12,7 +12,7 @@ import (
 )
 
 const allContacts = `-- name: AllContacts :many
-SELECT zoho_id, first_name, last_name, organization, email, phone, mobile, street, city, postal_code, status, modified_time, raw FROM contacts
+SELECT zoho_id, first_name, last_name, organization, email, phone, mobile, street, city, postal_code, status, modified_time, raw, synced_at FROM contacts
 `
 
 func (q *Queries) AllContacts(ctx context.Context) ([]Contact, error) {
@@ -38,6 +38,7 @@ func (q *Queries) AllContacts(ctx context.Context) ([]Contact, error) {
 			&i.Status,
 			&i.ModifiedTime,
 			&i.Raw,
+			&i.SyncedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -52,20 +53,32 @@ func (q *Queries) AllContacts(ctx context.Context) ([]Contact, error) {
 	return items, nil
 }
 
+const deleteContactsSyncedBefore = `-- name: DeleteContactsSyncedBefore :execrows
+DELETE FROM contacts WHERE synced_at < $1
+`
+
+func (q *Queries) DeleteContactsSyncedBefore(ctx context.Context, syncedAt time.Time) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteContactsSyncedBefore, syncedAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const upsertContact = `-- name: UpsertContact :exec
 INSERT INTO contacts (
     zoho_id, first_name, last_name, organization, email, phone, mobile,
-    street, city, postal_code, status, modified_time, raw
+    street, city, postal_code, status, modified_time, raw, synced_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
 )
 ON CONFLICT (zoho_id) DO UPDATE SET
     (first_name, last_name, organization, email, phone, mobile,
-     street, city, postal_code, status, modified_time, raw) =
+     street, city, postal_code, status, modified_time, raw, synced_at) =
     (EXCLUDED.first_name, EXCLUDED.last_name, EXCLUDED.organization,
      EXCLUDED.email, EXCLUDED.phone, EXCLUDED.mobile, EXCLUDED.street,
      EXCLUDED.city, EXCLUDED.postal_code, EXCLUDED.status,
-     EXCLUDED.modified_time, EXCLUDED.raw)
+     EXCLUDED.modified_time, EXCLUDED.raw, EXCLUDED.synced_at)
 `
 
 type UpsertContactParams struct {
@@ -82,6 +95,7 @@ type UpsertContactParams struct {
 	Status       string
 	ModifiedTime time.Time
 	Raw          json.RawMessage
+	SyncedAt     time.Time
 }
 
 func (q *Queries) UpsertContact(ctx context.Context, arg UpsertContactParams) error {
@@ -99,6 +113,7 @@ func (q *Queries) UpsertContact(ctx context.Context, arg UpsertContactParams) er
 		arg.Status,
 		arg.ModifiedTime,
 		arg.Raw,
+		arg.SyncedAt,
 	)
 	return err
 }

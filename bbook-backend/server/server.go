@@ -8,7 +8,9 @@ import (
 	"syscall"
 	"time"
 
+	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/database"
 	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/router"
+	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/zoho"
 )
 
 const addr = ":8081"
@@ -34,6 +36,24 @@ func Start(ctx context.Context) error {
 		close(serverErr)
 	}()
 
+	// Zoho sync job
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+	    for {
+			log.Printf("zoho sync: start")
+	        if err := runZohoSync(ctx); err != nil {
+	            log.Printf("zoho sync job: %v", err)
+	        }
+			log.Printf("zoho sync: done")
+	        select {
+	        case <-ctx.Done():
+	            return
+	        case <-ticker.C:
+	        }
+	    }
+	}()
+
 	select {
 	case err := <-serverErr:
 		return err
@@ -43,4 +63,37 @@ func Start(ctx context.Context) error {
 		defer cancel()
 		return srv.Shutdown(shutdownCtx)
 	}
+}
+
+
+
+
+func runZohoSync(ctx context.Context) error {
+	runStart := time.Now()
+	contacts, err := zoho.FetchContacts(ctx)
+	if err != nil {
+		return err
+	}
+
+	tx, err := database.Client.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()  // no-op after a successful Commit
+
+	q := database.Client.Queries.WithTx(tx)
+	for _, c := range contacts {
+		c.SyncedAt = time.Now()
+		if err := q.UpsertContact(ctx, database.UpsertContactParams(c)); err != nil {
+			return err
+		}
+	}
+
+	// Delete contacts that weren't synced by this run (i.e were deleted since the last sync)
+	deleted, err := q.DeleteContactsSyncedBefore(ctx, runStart)
+	if err != nil {
+		return err
+	}
+	log.Printf("zoho sync: upserted %d, deleted %d stale", len(contacts), deleted)
+	return tx.Commit()
 }
