@@ -10,12 +10,19 @@ import (
 
 	"git.adfinis.com/albertc/bbook/bbook-backend/database"
 	"git.adfinis.com/albertc/bbook/bbook-backend/router"
-	"git.adfinis.com/albertc/bbook/bbook-backend/zoho"
+	"git.adfinis.com/albertc/bbook/bbook-backend/server/search"
 )
 
 const addr = ":8081"
 
 func Start(ctx context.Context) error {
+
+	// Build the search index from the DB on startup
+	if contacts, err := database.Client.Queries.AllContacts(ctx); err != nil {
+		log.Printf("initial search index: load contacts: %v", err)
+	} else if err := search.Rebuild(contacts); err != nil {
+		log.Printf("initial search index: rebuild: %v", err)
+	}
 
 	srv := &http.Server{
 		Handler:      router.Router(),
@@ -42,9 +49,9 @@ func Start(ctx context.Context) error {
 		defer ticker.Stop()
 	    for {
 			log.Printf("zoho sync: start")
-	        if err := zoho.RunZohoSync(ctx); err != nil {
-	            log.Printf("zoho sync job: %v", err)
-	        }
+	        // if err := zoho.RunZohoSync(ctx); err != nil {
+	        //     log.Printf("zoho sync job: %v", err)
+	        // }
 			log.Printf("zoho sync: done")
 	        select {
 	        case <-ctx.Done():
@@ -63,34 +70,4 @@ func Start(ctx context.Context) error {
 		defer cancel()
 		return srv.Shutdown(shutdownCtx)
 	}
-}
-
-func runZohoSync(ctx context.Context) error {
-	runStart := time.Now()
-	contacts, err := zoho.FetchContacts(ctx)
-	if err != nil {
-		return err
-	}
-
-	tx, err := database.Client.DB.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback() // no-op after a successful Commit
-
-	q := database.Client.Queries.WithTx(tx)
-	for _, c := range contacts {
-		c.SyncedAt = time.Now()
-		if err := q.UpsertContact(ctx, database.UpsertContactParams(c)); err != nil {
-			return err
-		}
-	}
-
-	// Delete contacts that weren't synced by this run (i.e were deleted since the last sync)
-	deleted, err := q.DeleteContactsSyncedBefore(ctx, runStart)
-	if err != nil {
-		return err
-	}
-	log.Printf("zoho sync: upserted %d, deleted %d stale", len(contacts), deleted)
-	return tx.Commit()
 }

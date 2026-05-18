@@ -36,12 +36,31 @@
                 class="h-4 w-auto"
             />
             <span class="font-medium">bbook</span>
-            <span class="ml-auto text-xs text-neutral-400"
+            <input
+                name="q"
+                type="search"
+                placeholder="search..."
+                value="{{ .Query }}"
+                autocomplete="off"
+                autofocus
+                class="flex-1 max-w-md bg-brand-anthracite text-white placeholder-neutral-400 border border-brand-anthracite rounded px-2 py-0.5 text-sm focus:outline-none focus:border-brand-sapphire"
+                hx-get="/"
+                hx-trigger="input changed delay:200ms, search"
+                hx-target="#results"
+                hx-select="#results"
+                hx-swap="outerHTML"
+                hx-push-url="true"
+            />
+
+            <span class="text-xs text-neutral-400"
                 >{{ len .Contacts }} contacts</span
             >
         </header>
 
-        <table id="results" class="w-full border-collapse">
+        <table
+            id="results"
+            class="mx-auto w-full table-fixed border-collapse text-xs"
+        >
             <thead
                 class="sticky top-0 bg-brand-neutral text-xs uppercase tracking-wide text-brand-anthracite"
             >
@@ -52,19 +71,21 @@
                     </th>
                     <th class="text-left px-2 py-1 font-medium">Email</th>
                     <th class="text-left px-2 py-1 font-medium">Phone</th>
+                    <th class="text-left px-2 py-1 font-medium">Mobile</th>
+                    <th class="text-left px-2 py-1 font-medium">Address</th>
                 </tr>
             </thead>
             <tbody>
                 {{ range .Contacts }}
-                <tr class="border-b border-neutral-100 hover:bg-brand-neutral">
-                    <td class="px-2 py-1 whitespace-nowrap">
-                        {{ .FirstName }} {{ .LastName }}
-                    </td>
-                    <td class="px-2 py-1 whitespace-nowrap">
-                        {{ .Organization }}
-                    </td>
-                    <td class="px-2 py-1 whitespace-nowrap">{{ .Email }}</td>
-                    <td class="px-2 py-1 whitespace-nowrap">{{ .Phone }}</td>
+                <tr
+                    class="odd:bg-white even:bg-neutral-50 hover:bg-brand-neutral align-top"
+                >
+                    <td class="px-2 py-1 break-words">{{ .Name }}</td>
+                    <td class="px-2 py-1 break-words">{{ .Organization }}</td>
+                    <td class="px-2 py-1 break-words">{{ .Email }}</td>
+                    <td class="px-2 py-1 break-words">{{ .Phone }}</td>
+                    <td class="px-2 py-1 break-words">{{ .Mobile }}</td>
+                    <td class="px-2 py-1 break-words">{{ .Address }}</td>
                 </tr>
                 {{ end }}
             </tbody>

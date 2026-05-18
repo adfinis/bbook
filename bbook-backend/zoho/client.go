@@ -14,6 +14,7 @@ import (
 
 	"git.adfinis.com/albertc/bbook/bbook-backend/config"
 	"git.adfinis.com/albertc/bbook/bbook-backend/database"
+	"git.adfinis.com/albertc/bbook/bbook-backend/server/search"
 )
 
 var client zohoHTTPClient = zohoHTTPClient{}
@@ -61,6 +62,10 @@ func RunZohoSync(ctx context.Context) error {
 		return err
 	}
 
+	// Refresh the search index with the freshly-synced contacts.
+	if err := search.Rebuild(contacts); err != nil {
+		log.Printf("zoho sync: rebuild search index: %v", err)
+	}
 	return nil
 }
 
