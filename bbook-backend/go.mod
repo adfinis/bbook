@@ -8,3 +8,5 @@ require (
 	github.com/lib/pq v1.12.3
 	github.com/urfave/cli/v3 v3.8.0
 )
+
+require golang.org/x/sys v0.42.0 // indirect

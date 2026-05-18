@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>bbook</title>
+        <link rel="icon" type="image/png" href="/static/adfinis-favicon.png" />
+        <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            "brand-sapphire": "#2E4B98",
+                            "brand-biscay": "#1C2E5D",
+                            "brand-stone": "#0F0F0F",
+                            "brand-sunglow": "#FFCA31",
+                            "brand-prismarine": "#249087",
+                            "brand-anthracite": "#484848",
+                            "brand-grey": "#8B8B8C",
+                            "brand-neutral": "#F5F6F5",
+                        },
+                    },
+                },
+            };
+        </script>
+    </head>
+    <body class="bg-white text-neutral-900 text-sm">
+        <header
+            class="bg-brand-stone text-white px-3 py-2 flex items-center gap-3"
+        >
+            <img
+                src="/static/adfinis-emblem.png"
+                alt="Adfinis"
+                class="h-4 w-auto"
+            />
+            <span class="font-medium">bbook</span>
+            <span class="ml-auto text-xs text-neutral-400"
+                >{{ len .Contacts }} contacts</span
+            >
+        </header>
+
+        <table id="results" class="w-full border-collapse">
+            <thead
+                class="sticky top-0 bg-brand-neutral text-xs uppercase tracking-wide text-brand-anthracite"
+            >
+                <tr>
+                    <th class="text-left px-2 py-1 font-medium">Name</th>
+                    <th class="text-left px-2 py-1 font-medium">
+                        Organization
+                    </th>
+                    <th class="text-left px-2 py-1 font-medium">Email</th>
+                    <th class="text-left px-2 py-1 font-medium">Phone</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .Contacts }}
+                <tr class="border-b border-neutral-100 hover:bg-brand-neutral">
+                    <td class="px-2 py-1 whitespace-nowrap">
+                        {{ .FirstName }} {{ .LastName }}
+                    </td>
+                    <td class="px-2 py-1 whitespace-nowrap">
+                        {{ .Organization }}
+                    </td>
+                    <td class="px-2 py-1 whitespace-nowrap">{{ .Email }}</td>
+                    <td class="px-2 py-1 whitespace-nowrap">{{ .Phone }}</td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </body>
+</html>

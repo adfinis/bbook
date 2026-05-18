@@ -65,9 +65,6 @@ func Start(ctx context.Context) error {
 	}
 }
 
-
-
-
 func runZohoSync(ctx context.Context) error {
 	runStart := time.Now()
 	contacts, err := zoho.FetchContacts(ctx)
@@ -79,7 +76,7 @@ func runZohoSync(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()  // no-op after a successful Commit
+	defer tx.Rollback() // no-op after a successful Commit
 
 	q := database.Client.Queries.WithTx(tx)
 	for _, c := range contacts {
