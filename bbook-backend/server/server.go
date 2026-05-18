@@ -42,7 +42,7 @@ func Start(ctx context.Context) error {
 		defer ticker.Stop()
 	    for {
 			log.Printf("zoho sync: start")
-	        if err := runZohoSync(ctx); err != nil {
+	        if err := zoho.RunZohoSync(ctx); err != nil {
 	            log.Printf("zoho sync job: %v", err)
 	        }
 			log.Printf("zoho sync: done")

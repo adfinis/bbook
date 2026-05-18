@@ -29,59 +29,44 @@ func Init() error {
 	return nil
 }
 
-// Returns (and refreshes if necessary) the access token
-func token(ctx context.Context) (string, error) {
-	if client.accessToken != "" && time.Now().Before(client.expiry) {
-		return client.accessToken, nil
-	}
-
-	// Token needs to be refreshed
-
-	form := url.Values{}
-	form.Set("client_id", config.AppConfig.ZohoClientID)
-	form.Set("client_secret", config.AppConfig.ZohoClientSecret)
-	form.Set("grant_type", "refresh_token")
-	form.Set("refresh_token", config.AppConfig.ZohoRefreshToken)
-
-	endpoint := config.AppConfig.ZohoAccountsURL + "/oauth/v2/token"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
+// Fetches contacts from ZohoCRM and upserts them into the database, while deleting unavailable contacts.
+func RunZohoSync(ctx context.Context) error {
+	runStart := time.Now()
+	contacts, err := fetchContacts(ctx)
 	if err != nil {
-		return "", fmt.Errorf("refreshing zoho access token: build request: %w", err)
+		return err
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := client.httpClient.Do(req)
+	tx, err := database.Client.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return "", fmt.Errorf("refreshing zoho access token: %w", err)
+		return err
 	}
-	defer resp.Body.Close()
+	defer tx.Rollback() // no-op after a successful Commit
 
-	// Refresh successful
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("refreshing zoho access token: status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
-	}
-
-	var tr struct {
-		AccessToken string `json:"access_token"`
-		ExpiresIn   int    `json:"expires_in"`
+	q := database.Client.Queries.WithTx(tx)
+	for _, c := range contacts {
+		c.SyncedAt = time.Now()
+		if err := q.UpsertContact(ctx, database.UpsertContactParams(c)); err != nil {
+			return err
+		}
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
-		return "", fmt.Errorf("refreshing zoho access token: decode response: %w", err)
+	// Delete contacts that weren't synced by this run (i.e were deleted since the last sync)
+	deleted, err := q.DeleteContactsSyncedBefore(ctx, runStart)
+	if err != nil {
+		return err
 	}
-	if tr.AccessToken == "" {
-		return "", fmt.Errorf("refreshing zoho access token: empty access_token in response")
+	log.Printf("zoho sync: upserted %d, deleted %d stale", len(contacts), deleted)
+	if err := tx.Commit(); err != nil {
+		return err
 	}
 
-	client.accessToken = tr.AccessToken
-	client.expiry = time.Now().Add(time.Duration(tr.ExpiresIn-60) * time.Second)
-	return client.accessToken, nil
+	return nil
 }
 
 
 // Fetches all contacts from Zoho
-func FetchContacts(ctx context.Context) ([]database.Contact, error) {
+func fetchContacts(ctx context.Context) ([]database.Contact, error) {
 	var all []database.Contact
 
 	rawContacts, err := fetchContactsV8(ctx)
@@ -243,4 +228,55 @@ func (r rawZohoContact) toContact() database.Contact {
 		ModifiedTime: r.ModifiedTime,
 		Raw:          r.Raw,
 	}
+}
+
+
+// Returns (and refreshes if necessary) the access token
+func token(ctx context.Context) (string, error) {
+	if client.accessToken != "" && time.Now().Before(client.expiry) {
+		return client.accessToken, nil
+	}
+
+	// Token needs to be refreshed
+
+	form := url.Values{}
+	form.Set("client_id", config.AppConfig.ZohoClientID)
+	form.Set("client_secret", config.AppConfig.ZohoClientSecret)
+	form.Set("grant_type", "refresh_token")
+	form.Set("refresh_token", config.AppConfig.ZohoRefreshToken)
+
+	endpoint := config.AppConfig.ZohoAccountsURL + "/oauth/v2/token"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", fmt.Errorf("refreshing zoho access token: build request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("refreshing zoho access token: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Refresh successful
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("refreshing zoho access token: status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var tr struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int    `json:"expires_in"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
+		return "", fmt.Errorf("refreshing zoho access token: decode response: %w", err)
+	}
+	if tr.AccessToken == "" {
+		return "", fmt.Errorf("refreshing zoho access token: empty access_token in response")
+	}
+
+	client.accessToken = tr.AccessToken
+	client.expiry = time.Now().Add(time.Duration(tr.ExpiresIn-60) * time.Second)
+	return client.accessToken, nil
 }
