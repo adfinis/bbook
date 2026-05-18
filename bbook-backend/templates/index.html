@@ -52,6 +52,102 @@
                 hx-push-url="true"
             />
 
+            <!-- Query help tooltip -->
+            <div class="group relative">
+                <button
+                    type="button"
+                    aria-label="Search syntax help"
+                    class="text-neutral-400 hover:text-white p-1 -m-1"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4" />
+                        <path d="M12 8h.01" />
+                    </svg>
+                </button>
+                <div
+                    class="hidden group-hover:block group-focus-within:block absolute right-0 top-full pt-2 w-80 z-50"
+                >
+                    <div
+                        class="bg-white text-neutral-900 text-xs shadow-lg rounded border border-neutral-200 p-3"
+                    >
+                        <div class="font-medium text-sm mb-2 text-brand-stone">
+                            Search syntax
+                        </div>
+                        Search uses the
+                        <a
+                            href="https://github.com/mcandre/cheatsheets/blob/main/lucene.md#basic-queries"
+                            target="_blank"
+                            rel="noopener"
+                            class="text-brand-sapphire underline"
+                        >
+                            Lucene query syntax</a
+                        ><br />
+                        Examples:
+                        <dl
+                            class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 mt-1 items-baseline"
+                        >
+                            <dt class="font-mono text-brand-sapphire">
+                                lunkwill
+                            </dt>
+                            <dd class="text-neutral-600">
+                                exact term match in any field
+                            </dd>
+
+                            <dt class="font-mono text-brand-sapphire">lunk*</dt>
+                            <dd class="text-neutral-600">wildcard</dd>
+
+                            <dt class="font-mono text-brand-sapphire">
+                                org:adfinis
+                            </dt>
+                            <dd class="text-neutral-600">specific field</dd>
+
+                            <dt class="font-mono text-brand-sapphire">+a +b</dt>
+                            <dd class="text-neutral-600">both required</dd>
+
+                            <dt class="font-mono text-brand-sapphire">
+                                a AND b
+                            </dt>
+                            <dd class="text-neutral-600">same as above</dd>
+
+                            <dt class="font-mono text-brand-sapphire">
+                                a OR b
+                            </dt>
+                            <dd class="text-neutral-600">either term</dd>
+
+                            <dt class="font-mono text-brand-sapphire">
+                                -BlackRock
+                            </dt>
+                            <dd class="text-neutral-600">exclude term</dd>
+
+                            <dt class="font-mono text-brand-sapphire">
+                                "exact phrase"
+                            </dt>
+                            <dd class="text-neutral-600">phrase match</dd>
+                        </dl>
+                        <div
+                            class="mt-2 pt-2 border-t border-neutral-200 text-neutral-600"
+                        >
+                            Fields:&nbsp;{{- range $i, $f := .FieldNames -}} {{-
+                            if $i }}, {{ end -}}
+                            <span class="font-mono text-brand-sapphire"
+                                >{{ $f }}</span
+                            >
+                            {{- end -}}
+                        </div>
+                    </div>
+                </div>
+            </div>
             <span class="text-xs text-neutral-400"
                 >{{ len .Contacts }} contacts</span
             >
@@ -66,9 +162,7 @@
             >
                 <tr>
                     <th class="text-left px-2 py-1 font-medium">Name</th>
-                    <th class="text-left px-2 py-1 font-medium">
-                        Organization
-                    </th>
+                    <th class="text-left px-2 py-1 font-medium">Org</th>
                     <th class="text-left px-2 py-1 font-medium">Email</th>
                     <th class="text-left px-2 py-1 font-medium">Phone</th>
                     <th class="text-left px-2 py-1 font-medium">Mobile</th>
@@ -81,7 +175,7 @@
                     class="odd:bg-white even:bg-neutral-50 hover:bg-brand-neutral align-top"
                 >
                     <td class="px-2 py-1 break-words">{{ .Name }}</td>
-                    <td class="px-2 py-1 break-words">{{ .Organization }}</td>
+                    <td class="px-2 py-1 break-words">{{ .Org }}</td>
                     <td class="px-2 py-1 break-words">{{ .Email }}</td>
                     <td class="px-2 py-1 break-words">{{ .Phone }}</td>
                     <td class="px-2 py-1 break-words">{{ .Mobile }}</td>

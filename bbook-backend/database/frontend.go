@@ -5,7 +5,7 @@ import "strings"
 // ContactView is the projection of a database record to be displayed to the user. Strips away any non-relevant fields.
 type ContactView struct {
 	Name         string
-	Organization string
+	Org string
 	Email        string
 	Phone        string
 	Mobile       string
@@ -26,7 +26,7 @@ func (c Contact) ToView() ContactView {
 
 	return ContactView{
 		Name:         strings.TrimSpace(c.FirstName + " " + c.LastName),
-		Organization: c.Organization,
+		Org: c.Organization,
 		Email:        c.Email,
 		Phone:        c.Phone,
 		Mobile:       c.Mobile,

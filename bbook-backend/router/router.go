@@ -35,6 +35,7 @@ func Router() *mux.Router {
 
 		contacts, err := search.Search(q)
 		if err != nil {
+			log.Printf("search query %v: %v", q, err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

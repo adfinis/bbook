@@ -8,7 +8,6 @@ import (
 
 	"git.adfinis.com/albertc/bbook/bbook-backend/database"
 	"github.com/blevesearch/bleve/v2"
-	"github.com/blevesearch/bleve/v2/search/query"
 )
 
 // field describes one database.ContactView field that bleve indexes.
@@ -90,8 +89,8 @@ func Search(q string) ([]database.ContactView, error) {
 		return s.ordered, nil
 	}
 
-	var qry query.Query = bleve.NewQueryStringQuery(q)
-	req := bleve.NewSearchRequest(qry)
+	req := bleve.NewSearchRequest(bleve.NewQueryStringQuery(q))
+	req.Size = len(s.ordered)
 
 	res, err := s.idx.Search(req)
 	if err != nil {
@@ -106,7 +105,6 @@ func Search(q string) ([]database.ContactView, error) {
 	}
 	return results, nil
 }
-
 
 func contactDoc(c database.ContactView) map[string]any {
 	rv := reflect.ValueOf(c)
