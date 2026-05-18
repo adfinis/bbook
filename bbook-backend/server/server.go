@@ -8,9 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/database"
-	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/router"
-	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/zoho"
+	"git.adfinis.com/albertc/bbook/bbook-backend/database"
+	"git.adfinis.com/albertc/bbook/bbook-backend/router"
+	"git.adfinis.com/albertc/bbook/bbook-backend/zoho"
 )
 
 const addr = ":8081"

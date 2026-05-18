@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/config"
-	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/database"
+	"git.adfinis.com/albertc/bbook/bbook-backend/config"
+	"git.adfinis.com/albertc/bbook/bbook-backend/database"
 )
 
 var client zohoHTTPClient = zohoHTTPClient{}

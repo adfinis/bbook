@@ -5,9 +5,9 @@ import (
 	"log"
 	"os"
 
-	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/database"
-	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/server"
-	"git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend/zoho"
+	"git.adfinis.com/albertc/bbook/bbook-backend/database"
+	"git.adfinis.com/albertc/bbook/bbook-backend/server"
+	"git.adfinis.com/albertc/bbook/bbook-backend/zoho"
 	"github.com/urfave/cli/v3"
 )
 

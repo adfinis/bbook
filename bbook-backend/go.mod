@@ -1,4 +1,4 @@
-module git.sos.ethz.ch/vsos/bbook.vsos.ethz.ch/bbook-backend
+module git.adfinis.com/albertc/bbook/bbook-backend
 
 go 1.26.0
 
