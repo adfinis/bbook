@@ -12,7 +12,5 @@ www.app.vsos.ethz.ch app.vsos.ethz.ch {
     level DEBUG
   }
 
-  reverse_proxy /api/* http://bbook-backend:8081
-
-  reverse_proxy http://bbook-frontend:3000
+  reverse_proxy http://bbook-backend:8081
 }

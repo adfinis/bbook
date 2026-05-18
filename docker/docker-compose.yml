@@ -72,23 +72,3 @@ services:
       retries: 10
       start_period: 10s
 
-  bbook-frontend:
-    container_name: bbook-frontend
-    build:
-      context: ../bbook-frontend
-      dockerfile: Dockerfile.dev
-    restart: unless-stopped
-    networks:
-      - bbook-internal
-    environment:
-      - CI=true
-    volumes:
-      - ../bbook-frontend:/app
-      # make sure we shadow node_modules and .next to avoid conflicts with the host
-      - /app/node_modules
-      - /app/.next
-
-      - /etc/timezone:/etc/timezone
-      - /etc/localtime:/etc/localtime
-    working_dir: /app
-    command: /bin/sh -c "pnpm install && pnpm dev"
