@@ -102,6 +102,17 @@
                 saveFavourites(loadFavourites().filter((f) => f !== q));
                 renderFavourites();
             }
+
+            // Clicking an organization cell filters the search by that org.
+            document.addEventListener("click", function (e) {
+                const cell = e.target.closest("[data-org]");
+                if (!cell) return;
+                const org = cell.dataset.org;
+                if (!org) return;
+                const input = document.querySelector('input[name="q"]');
+                input.value = `org:"${org.replace(/"/g, '\\"')}"`;
+                input.dispatchEvent(new Event("search", { bubbles: true }));
+            });
         </script>
     </head>
     <body class="bg-white text-neutral-900 text-sm">
@@ -289,7 +300,6 @@
                     <th class="text-left px-2 py-1 font-medium">Org</th>
                     <th class="text-left px-2 py-1 font-medium">Email</th>
                     <th class="text-left px-2 py-1 font-medium">Phone</th>
-                    <th class="text-left px-2 py-1 font-medium">Mobile</th>
                     <th class="text-left px-2 py-1 font-medium">Address</th>
                 </tr>
             </thead>
@@ -298,12 +308,46 @@
                 <tr
                     class="odd:bg-white even:bg-neutral-50 hover:bg-brand-neutral align-top"
                 >
-                    <td class="px-2 py-1 break-words">{{ .Name }}</td>
-                    <td class="px-2 py-1 break-words">{{ .Org }}</td>
-                    <td class="px-2 py-1 break-words">{{ .Email }}</td>
-                    <td class="px-2 py-1 break-words">{{ .Phone }}</td>
-                    <td class="px-2 py-1 break-words">{{ .Mobile }}</td>
-                    <td class="px-2 py-1 break-words">{{ .Address }}</td>
+                    <td class="px-2 py-1 truncate" title="{{ .Name }}">
+                        {{ .Name }}
+                    </td>
+                    <td
+                        class="px-2 py-1 truncate cursor-pointer hover:text-brand-sapphire"
+                        title="{{ .Org }}"
+                        data-org="{{ .Org }}"
+                    >
+                        {{ .Org }}
+                    </td>
+                    <td class="px-2 py-1 truncate" title="{{ .Email }}">
+                        {{- if .Email -}}
+                        <a
+                            href="mailto:{{ .Email }}"
+                            class="hover:text-brand-sapphire hover:underline"
+                            >{{ .Email }}</a
+                        >
+                        {{- end -}}
+                    </td>
+                    <td
+                        class="px-2 py-1 w-43 flex gap-3 truncate"
+                        title="{{- if .Phone }}{{ .Phone }}{{ end -}}{{- if and .Phone .Mobile }} | {{ end -}}{{- if .Mobile }}{{ .Mobile }}{{ end -}}"
+                    >
+                        {{- if .Phone }}
+                        <a
+                            href="tel:{{ .Phone }}"
+                            class="hover:text-brand-sapphire hover:underline"
+                            >{{ .Phone }}</a
+                        >
+                        {{ end -}} {{- if .Mobile }}
+                        <a
+                            href="tel:{{ .Mobile }}"
+                            class="hover:text-brand-sapphire hover:underline"
+                            >{{ .Mobile }}</a
+                        >
+                        {{ end -}}
+                    </td>
+                    <td class="px-2 py-1 truncate" title="{{ .Address }}">
+                        {{ .Address }}
+                    </td>
                 </tr>
                 {{ end }}
             </tbody>
