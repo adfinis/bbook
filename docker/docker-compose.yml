@@ -29,14 +29,14 @@ services:
   bbook-backend:
     container_name: bbook-backend
     build:
-      context: ../bbook-backend
+      context: ../src
       dockerfile: Dockerfile.dev
     restart: unless-stopped
     networks:
       - bbook-internal
     command: ["air"]
     volumes:
-      - ../bbook-backend:/app
+      - ../src:/app
       - /etc/timezone:/etc/timezone
       - /etc/localtime:/etc/localtime
     env_file:
@@ -71,4 +71,3 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
-
