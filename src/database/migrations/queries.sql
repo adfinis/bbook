@@ -14,7 +14,7 @@ ON CONFLICT (zoho_id) DO UPDATE SET
      EXCLUDED.modified_time, EXCLUDED.raw, EXCLUDED.synced_at);
 
 -- name: AllContacts :many
-SELECT * FROM contacts;
+SELECT * FROM contacts ORDER BY last_name, first_name;
 
 -- name: DeleteContactsSyncedBefore :execrows
 DELETE FROM contacts WHERE synced_at < $1;

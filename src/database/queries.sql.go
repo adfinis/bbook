@@ -12,7 +12,7 @@ import (
 )
 
 const allContacts = `-- name: AllContacts :many
-SELECT zoho_id, first_name, last_name, organization, email, phone, mobile, street, city, postal_code, status, modified_time, raw, synced_at FROM contacts
+SELECT zoho_id, first_name, last_name, organization, email, phone, mobile, street, city, postal_code, status, modified_time, raw, synced_at FROM contacts ORDER BY last_name, first_name
 `
 
 func (q *Queries) AllContacts(ctx context.Context) ([]Contact, error) {

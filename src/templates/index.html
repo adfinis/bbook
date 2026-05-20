@@ -103,21 +103,39 @@
                 renderFavourites();
             }
 
-            // Clicking an organization cell filters the search by that org.
-            document.addEventListener("click", function (e) {
-                const cell = e.target.closest("[data-org]");
-                if (!cell) return;
-                const org = cell.dataset.org;
-                if (!org) return;
+            // Sets the search input and triggers the htmx event to update results
+            function setQuery(q) {
                 const input = document.querySelector('input[name="q"]');
-                input.value = `org:"${org.replace(/"/g, '\\"')}"`;
+                input.value = q;
                 input.dispatchEvent(new Event("search", { bubbles: true }));
+            }
+
+            function clearSearch() {
+                setQuery("");
+                document.querySelector('input[name="q"]').focus();
+            }
+
+            // When clicking on an org or a letter in the sidebar, sets the query accordingly
+            document.addEventListener("click", function (e) {
+                const orgCell = e.target.closest("[data-org]");
+                const letterBtn = e.target.closest("[data-letter]");
+
+                if (orgCell) {
+                    const org = orgCell.dataset.org;
+                    if (org) {
+                        setQuery(`org:"${org.replace(/"/g, '\\"')}"`);
+                    }
+                    return;
+                } else if (letterBtn) {
+                    setQuery(`lastname:${letterBtn.dataset.letter}*`);
+                    return;
+                }
             });
         </script>
     </head>
     <body class="bg-white text-neutral-900 text-sm">
         <header
-            class="bg-brand-stone text-white px-3 py-2 flex items-center gap-3"
+            class="bg-brand-stone text-white px-3 py-2.5 flex items-center gap-3 shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_1px_2px_0_rgba(0,0,0,0.15)]"
         >
             <a href="/" class="flex items-center gap-2 hover:opacity-80">
                 <img
@@ -127,21 +145,44 @@
                 />
                 <span class="font-medium">bbook</span>
             </a>
-            <input
-                name="q"
-                type="search"
-                placeholder="search..."
-                value="{{ .Query }}"
-                autocomplete="off"
-                autofocus
-                class="flex-1 max-w-md bg-brand-anthracite text-white placeholder-neutral-400 border border-brand-anthracite rounded px-2 py-0.5 text-sm focus:outline-none focus:border-brand-sapphire"
-                hx-get="/"
-                hx-trigger="input changed delay:500ms, search"
-                hx-target="#results"
-                hx-select="#results"
-                hx-swap="outerHTML"
-                hx-push-url="true"
-            />
+            <div class="flex-1 max-w-md relative">
+                <input
+                    name="q"
+                    type="search"
+                    placeholder="search..."
+                    value="{{ .Query }}"
+                    autocomplete="off"
+                    autofocus
+                    class="peer w-full bg-brand-anthracite text-white placeholder-neutral-400 border border-brand-anthracite rounded pl-2 pr-7 py-0.5 text-sm focus:outline-none focus:border-brand-sapphire [&::-webkit-search-cancel-button]:appearance-none"
+                    hx-get="/"
+                    hx-trigger="input changed delay:500ms, search"
+                    hx-target="#results"
+                    hx-select="#results"
+                    hx-swap="outerHTML"
+                    hx-push-url="true"
+                />
+                <button
+                    type="button"
+                    aria-label="Clear search"
+                    onclick="clearSearch()"
+                    class="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex items-center text-neutral-400 hover:text-white peer-placeholder-shown:hidden"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
 
             <div class="flex gap-4 items-center">
                 <!-- Save current query as favourite -->
@@ -279,7 +320,7 @@
         <!-- Favourite queries -->
         <div
             id="favourites"
-            class="hidden flex flex-wrap items-center gap-1 px-3 py-1 bg-brand-neutral text-xs border-b border-neutral-200"
+            class="hidden flex flex-wrap items-center gap-1.5 px-3 py-1.5 bg-brand-neutral text-xs border-b border-neutral-200"
         >
             <span class="text-neutral-500 mr-1"> Favourites: </span>
         </div>
@@ -288,69 +329,103 @@
             renderFavourites();
         </script>
 
-        <table
-            id="results"
-            class="mx-auto w-full table-fixed border-collapse text-xs"
-        >
-            <thead
-                class="sticky top-0 bg-brand-neutral text-xs uppercase tracking-wide text-brand-anthracite"
+        <div class="flex">
+            <!-- A–Z sidebar -->
+            <nav
+                aria-label="Jump to letter"
+                class="w-7 bg-brand-neutral border-r border-neutral-200 text-[10px] font-medium text-neutral-500 select-none [&_button]:py-0.5 [&_button]:cursor-pointer [&_button]:hover:text-brand-sapphire"
             >
-                <tr>
-                    <th class="text-left px-2 py-1 font-medium">Name</th>
-                    <th class="text-left px-2 py-1 font-medium">Org</th>
-                    <th class="text-left px-2 py-1 font-medium">Email</th>
-                    <th class="text-left px-2 py-1 font-medium">Phone</th>
-                    <th class="text-left px-2 py-1 font-medium">Address</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{ range .Contacts }}
-                <tr
-                    class="odd:bg-white even:bg-neutral-50 hover:bg-brand-neutral align-top"
+                <div class="sticky top-0 flex flex-col items-stretch py-2">
+                    <button data-letter="a">A</button>
+                    <button data-letter="b">B</button>
+                    <button data-letter="c">C</button>
+                    <button data-letter="d">D</button>
+                    <button data-letter="e">E</button>
+                    <button data-letter="f">F</button>
+                    <button data-letter="g">G</button>
+                    <button data-letter="h">H</button>
+                    <button data-letter="i">I</button>
+                    <button data-letter="j">J</button>
+                    <button data-letter="k">K</button>
+                    <button data-letter="l">L</button>
+                    <button data-letter="m">M</button>
+                    <button data-letter="n">N</button>
+                    <button data-letter="o">O</button>
+                    <button data-letter="p">P</button>
+                    <button data-letter="q">Q</button>
+                    <button data-letter="r">R</button>
+                    <button data-letter="s">S</button>
+                    <button data-letter="t">T</button>
+                    <button data-letter="u">U</button>
+                    <button data-letter="v">V</button>
+                    <button data-letter="w">W</button>
+                    <button data-letter="x">X</button>
+                    <button data-letter="y">Y</button>
+                    <button data-letter="z">Z</button>
+                </div>
+            </nav>
+
+            <table
+                id="results"
+                class="mx-auto w-full min-w-0 table-fixed border-collapse text-xs"
+            >
+                <thead
+                    class="sticky top-0 bg-white text-[10px] uppercase tracking-wider text-brand-anthracite border-b border-neutral-300 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.04)] [&>tr>th]:text-left [&>tr>th]:px-3 [&>tr>th]:py-2 [&>tr>th]:font-semibold"
                 >
-                    <td class="px-2 py-1 truncate" title="{{ .Name }}">
-                        {{ .Name }}
-                    </td>
-                    <td
-                        class="px-2 py-1 truncate cursor-pointer hover:text-brand-sapphire"
-                        title="{{ .Org }}"
-                        data-org="{{ .Org }}"
-                    >
-                        {{ .Org }}
-                    </td>
-                    <td class="px-2 py-1 truncate" title="{{ .Email }}">
-                        {{- if .Email -}}
-                        <a
-                            href="mailto:{{ .Email }}"
-                            class="hover:text-brand-sapphire hover:underline"
-                            >{{ .Email }}</a
+                    <tr>
+                        <th>Name</th>
+                        <th>Org</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Address</th>
+                    </tr>
+                </thead>
+                <tbody
+                    class="divide-y divide-neutral-100 [&_td]:px-3 [&_td]:py-1.5 [&_a:hover]:text-brand-sapphire [&_a:hover]:underline"
+                >
+                    {{ range .Contacts }}
+                    <tr class="hover:bg-brand-neutral align-top">
+                        <td
+                            class="truncate font-medium text-brand-stone"
+                            title="{{ .FullName }}"
                         >
-                        {{- end -}}
-                    </td>
-                    <td
-                        class="px-2 py-1 w-43 flex gap-3 truncate"
-                        title="{{- if .Phone }}{{ .Phone }}{{ end -}}{{- if and .Phone .Mobile }} | {{ end -}}{{- if .Mobile }}{{ .Mobile }}{{ end -}}"
-                    >
-                        {{- if .Phone }}
-                        <a
-                            href="tel:{{ .Phone }}"
-                            class="hover:text-brand-sapphire hover:underline"
-                            >{{ .Phone }}</a
+                            {{ .FullName }}
+                        </td>
+                        <td
+                            class="truncate text-neutral-700 cursor-pointer hover:text-brand-sapphire"
+                            title="{{ .Org }}"
+                            data-org="{{ .Org }}"
                         >
-                        {{ end -}} {{- if .Mobile }}
-                        <a
-                            href="tel:{{ .Mobile }}"
-                            class="hover:text-brand-sapphire hover:underline"
-                            >{{ .Mobile }}</a
+                            {{ .Org }}
+                        </td>
+                        <td
+                            class="truncate text-neutral-700"
+                            title="{{ .Email }}"
                         >
-                        {{ end -}}
-                    </td>
-                    <td class="px-2 py-1 truncate" title="{{ .Address }}">
-                        {{ .Address }}
-                    </td>
-                </tr>
-                {{ end }}
-            </tbody>
-        </table>
+                            {{- if .Email -}}
+                            <a href="mailto:{{ .Email }}">{{ .Email }}</a>
+                            {{- end -}}
+                        </td>
+                        <td
+                            class="w-43 flex gap-3 truncate text-neutral-700 tabular-nums"
+                            title="{{- if .Phone }}{{ .Phone }}{{ end -}}{{- if and .Phone .Mobile }} | {{ end -}}{{- if .Mobile }}{{ .Mobile }}{{ end -}}"
+                        >
+                            {{- if .Phone }}
+                            <a href="tel:{{ .Phone }}">{{ .Phone }}</a>
+                            {{ end -}} {{- if .Mobile }}
+                            <a href="tel:{{ .Mobile }}">{{ .Mobile }}</a>
+                            {{ end -}}
+                        </td>
+                        <td
+                            class="truncate text-neutral-500"
+                            title="{{ .Address }}"
+                        >
+                            {{ .Address }}
+                        </td>
+                    </tr>
+                    {{ end }}
+                </tbody>
+            </table>
+        </div>
     </body>
 </html>
