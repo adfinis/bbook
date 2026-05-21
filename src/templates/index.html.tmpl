@@ -73,6 +73,32 @@
                 renderFavourites();
             }
 
+            // Sets the active URL. Makes sure the input and the URL are synced, then triggers an htmx event for fetching the results.
+            function setQuery(q) {
+                const input = document.querySelector('input[name="q"]');
+                input.value = q;
+                history.pushState(
+                    null,
+                    "",
+                    q ? "/?q=" + encodeURIComponent(q) : "/",
+                );
+                input.dispatchEvent(new Event("search", { bubbles: true }));
+            }
+
+            // Intercept clicks on the header logo such that we clear the query rather than doing a full page refresh.
+            document.addEventListener("click", (e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0)
+                    return;
+
+                const link = e.target.closest("a[href]");
+                if (!link) return;
+                const url = new URL(link.href);
+                if (url.origin !== location.origin || url.pathname !== "/")
+                    return;
+                e.preventDefault();
+                setQuery(url.searchParams.get("q") || "");
+            });
+
             // Keep the URL in sync with the search input as the user types
             document.addEventListener("input", (e) => {
                 if (e.target.name !== "q") return;
@@ -84,11 +110,11 @@
                 );
             });
 
-            // After back/forward (browser restores URL but not the input).
+            // Apply query when the URL changes.
             window.addEventListener("popstate", () => {
-                const input = document.querySelector('input[name="q"]');
-                const url = new URL(window.location.href);
-                input.value = url.searchParams.get("q") || "";
+                const q =
+                    new URL(window.location.href).searchParams.get("q") || "";
+                setQuery(q);
             });
 
             // HTML-escape a value used inside text content or an attribute.
@@ -111,7 +137,11 @@
         <header
             class="bg-brand-stone text-white px-3 py-2.5 flex items-center gap-3 shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_1px_2px_0_rgba(0,0,0,0.15)]"
         >
-            <a href="/" class="flex items-center gap-2 hover:opacity-80">
+            <a
+                href="/"
+                class="flex items-center gap-2 hover:opacity-80"
+                id="headerlogo"
+            >
                 <img
                     src="/static/adfinis-emblem.png"
                     alt="Adfinis"
@@ -129,7 +159,7 @@
                     autofocus
                     class="peer w-full bg-brand-anthracite text-white placeholder-neutral-400 border border-brand-anthracite rounded pl-2 pr-7 py-0.5 text-sm focus:outline-none focus:border-brand-sapphire [&::-webkit-search-cancel-button]:appearance-none"
                     hx-get="/contacts"
-                    hx-trigger="input changed delay:500ms, search"
+                    hx-trigger="input changed, search"
                     hx-target="#contacts-rows"
                     hx-swap="innerHTML"
                 />
@@ -304,35 +334,35 @@
             <!-- A–Z sidebar -->
             <nav
                 aria-label="Jump to letter"
-                class="w-7 bg-brand-neutral border-r border-neutral-200 text-[10px] font-medium text-neutral-500 select-none [&_a]:py-0.5 [&_a]:text-center [&_a]:cursor-pointer [&_a]:hover:text-brand-sapphire"
+                class="w-7 bg-brand-neutral border-r border-neutral-200 text-[10px] font-medium text-neutral-500 select-none [&_button]:py-0.5 [&_button]:cursor-pointer [&_button]:hover:text-brand-sapphire"
             >
                 <div class="sticky top-0 flex flex-col items-stretch py-2">
-                    <a href="/?q=lastname:a*">A</a>
-                    <a href="/?q=lastname:b*">B</a>
-                    <a href="/?q=lastname:c*">C</a>
-                    <a href="/?q=lastname:d*">D</a>
-                    <a href="/?q=lastname:e*">E</a>
-                    <a href="/?q=lastname:f*">F</a>
-                    <a href="/?q=lastname:g*">G</a>
-                    <a href="/?q=lastname:h*">H</a>
-                    <a href="/?q=lastname:i*">I</a>
-                    <a href="/?q=lastname:j*">J</a>
-                    <a href="/?q=lastname:k*">K</a>
-                    <a href="/?q=lastname:l*">L</a>
-                    <a href="/?q=lastname:m*">M</a>
-                    <a href="/?q=lastname:n*">N</a>
-                    <a href="/?q=lastname:o*">O</a>
-                    <a href="/?q=lastname:p*">P</a>
-                    <a href="/?q=lastname:q*">Q</a>
-                    <a href="/?q=lastname:r*">R</a>
-                    <a href="/?q=lastname:s*">S</a>
-                    <a href="/?q=lastname:t*">T</a>
-                    <a href="/?q=lastname:u*">U</a>
-                    <a href="/?q=lastname:v*">V</a>
-                    <a href="/?q=lastname:w*">W</a>
-                    <a href="/?q=lastname:x*">X</a>
-                    <a href="/?q=lastname:y*">Y</a>
-                    <a href="/?q=lastname:z*">Z</a>
+                    <button hx-on:click="setQuery('lastname:a*')">A</button>
+                    <button hx-on:click="setQuery('lastname:b*')">B</button>
+                    <button hx-on:click="setQuery('lastname:c*')">C</button>
+                    <button hx-on:click="setQuery('lastname:d*')">D</button>
+                    <button hx-on:click="setQuery('lastname:e*')">E</button>
+                    <button hx-on:click="setQuery('lastname:f*')">F</button>
+                    <button hx-on:click="setQuery('lastname:g*')">G</button>
+                    <button hx-on:click="setQuery('lastname:h*')">H</button>
+                    <button hx-on:click="setQuery('lastname:i*')">I</button>
+                    <button hx-on:click="setQuery('lastname:j*')">J</button>
+                    <button hx-on:click="setQuery('lastname:k*')">K</button>
+                    <button hx-on:click="setQuery('lastname:l*')">L</button>
+                    <button hx-on:click="setQuery('lastname:m*')">M</button>
+                    <button hx-on:click="setQuery('lastname:n*')">N</button>
+                    <button hx-on:click="setQuery('lastname:o*')">O</button>
+                    <button hx-on:click="setQuery('lastname:p*')">P</button>
+                    <button hx-on:click="setQuery('lastname:q*')">Q</button>
+                    <button hx-on:click="setQuery('lastname:r*')">R</button>
+                    <button hx-on:click="setQuery('lastname:s*')">S</button>
+                    <button hx-on:click="setQuery('lastname:t*')">T</button>
+                    <button hx-on:click="setQuery('lastname:u*')">U</button>
+                    <button hx-on:click="setQuery('lastname:v*')">V</button>
+                    <button hx-on:click="setQuery('lastname:w*')">W</button>
+                    <button hx-on:click="setQuery('lastname:x*')">X</button>
+                    <button hx-on:click="setQuery('lastname:y*')">Y</button>
+                    <button hx-on:click="setQuery('lastname:z*')">Z</button>
                 </div>
             </nav>
 

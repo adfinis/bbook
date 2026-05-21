@@ -11,13 +11,14 @@
     >
         {{ .FullName }}
     </div>
-    <a
-        class="px-3 py-1.5 truncate min-w-0 text-neutral-700 hover:text-brand-sapphire"
+    <button
+        class="px-3 py-1.5 truncate min-w-0 text-neutral-700 hover:text-brand-sapphire cursor-pointer text-left"
         title="{{ .Org }}"
-        href="/?q={{ printf `org:"%s"` .Org | urlquery }}"
+        data-q='org:"{{ .Org }}"'
+        hx-on:click="setQuery(this.dataset.q)"
     >
         {{ .Org }}
-    </a>
+    </button>
     <div
         class="px-3 py-1.5 truncate min-w-0 text-neutral-700"
         title="{{ .Email }}"
@@ -55,7 +56,7 @@
         {{ .Address }}
     </div>
 </div>
-<!-- For each subsequent page, we render a placeholder such that when its scrolled into view, the page is fetched and the placeholder is replaced. -->
+<!-- For each subsequent page, we render a placeholder such that when its scrolled into view, the page is fetched and the page placeholder is replaced. -->
 {{ end }} {{ range .Spacers }}
 <div
     style="height: calc({{ .Count }} * {{ $rowHeight }})"
