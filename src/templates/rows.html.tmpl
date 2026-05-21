@@ -1,6 +1,9 @@
-{{ range . }}
+
+{{ $rowHeight := "29px" }}
+{{ range .Contacts }}
 <div
-    class="grid grid-cols-5 border-b border-neutral-100 [content-visibility:auto] [contain-intrinsic-size:0_28px] hover:bg-brand-neutral"
+    class="grid grid-cols-5 border-b border-neutral-100 [content-visibility:auto] hover:bg-brand-neutral"
+    style="height: {{ $rowHeight }}"
 >
     <div
         class="px-3 py-1.5 truncate min-w-0 font-medium text-brand-stone"
@@ -52,4 +55,12 @@
         {{ .Address }}
     </div>
 </div>
+<!-- For each subsequent page, we render a placeholder such that when its scrolled into view, the page is fetched and the placeholder is replaced. -->
+{{ end }} {{ range .Spacers }}
+<div
+    style="height: calc({{ .Count }} * {{ $rowHeight }})"
+    hx-get="/contacts?q={{ .Query | urlquery }}&page={{ .Page }}"
+    hx-trigger="intersect once"
+    hx-swap="outerHTML"
+></div>
 {{ end }}
