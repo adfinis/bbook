@@ -12,12 +12,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Contains all htmx templates
-var tmpl = template.Must(template.ParseFS(templates.FS, "*.html"))
+var tmpl = template.Must(template.ParseFS(templates.FS, "*.tmpl"))
 
 type indexTmplData struct {
 	Query      string
 	Contacts   []database.ContactView
+	TotalRows  int
 	FieldNames []string
 }
 
@@ -40,9 +40,18 @@ func Router() *mux.Router {
 			return
 		}
 
-		if err := tmpl.ExecuteTemplate(w, "index.html", indexTmplData{
+		// htmx fragment requests (only the search input typing) just need the rows. Everything else gets the full page.
+		if r.Header.Get("HX-Request") == "true" {
+			if err := tmpl.ExecuteTemplate(w, "rows.html.tmpl", contacts); err != nil {
+				log.Printf("rendering rows: %v", err)
+			}
+			return
+		}
+
+		if err := tmpl.ExecuteTemplate(w, "index.html.tmpl", indexTmplData{
 			Query:      q,
 			Contacts:   contacts,
+			TotalRows:  len(contacts),
 			FieldNames: search.FieldNames,
 		}); err != nil {
 			log.Printf("rendering index: %v", err)

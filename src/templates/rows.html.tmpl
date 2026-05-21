@@ -1,0 +1,55 @@
+{{ range . }}
+<div
+    class="grid grid-cols-5 border-b border-neutral-100 [content-visibility:auto] [contain-intrinsic-size:0_28px] hover:bg-brand-neutral"
+>
+    <div
+        class="px-3 py-1.5 truncate min-w-0 font-medium text-brand-stone"
+        title="{{ .FullName }}"
+    >
+        {{ .FullName }}
+    </div>
+    <a
+        class="px-3 py-1.5 truncate min-w-0 text-neutral-700 hover:text-brand-sapphire"
+        title="{{ .Org }}"
+        href="/?q={{ printf `org:"%s"` .Org | urlquery }}"
+    >
+        {{ .Org }}
+    </a>
+    <div
+        class="px-3 py-1.5 truncate min-w-0 text-neutral-700"
+        title="{{ .Email }}"
+    >
+        {{- if .Email -}}
+        <a
+            href="mailto:{{ .Email }}"
+            class="hover:text-brand-sapphire hover:underline"
+            >{{ .Email }}</a
+        >
+        {{- end -}}
+    </div>
+    <div
+        class="px-3 py-1.5 truncate min-w-0 text-neutral-700 flex gap-3 tabular-nums"
+        title="{{- if .Phone }}{{ .Phone }}{{ end -}}{{- if and .Phone .Mobile }} | {{ end -}}{{- if .Mobile }}{{ .Mobile }}{{ end -}}"
+    >
+        {{- if .Phone }}
+        <a
+            href="tel:{{ .Phone }}"
+            class="hover:text-brand-sapphire hover:underline"
+            >{{ .Phone }}</a
+        >
+        {{ end -}} {{- if .Mobile }}
+        <a
+            href="tel:{{ .Mobile }}"
+            class="hover:text-brand-sapphire hover:underline"
+            >{{ .Mobile }}</a
+        >
+        {{ end -}}
+    </div>
+    <div
+        class="px-3 py-1.5 truncate min-w-0 text-neutral-500"
+        title="{{ .Address }}"
+    >
+        {{ .Address }}
+    </div>
+</div>
+{{ end }}
