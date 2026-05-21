@@ -7,6 +7,7 @@
         <link rel="icon" type="image/png" href="/static/adfinis-favicon.png" />
         <link rel="stylesheet" href="/static/tailwind.css" />
         <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+        <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
         <script>
             const FAV_KEY = "bbook.favourites";
 
@@ -22,23 +23,23 @@
                 localStorage.setItem(FAV_KEY, JSON.stringify(favs));
             }
 
-            // Returns the HTML for a single favourite chip.
-            function renderFavouriteChip(q) {
-                const url = "/?q=" + encodeURIComponent(q);
-                return `
-<a href="${esc(url)}"
-   class="group/fav inline-flex items-center gap-1 bg-white border border-neutral-200 rounded px-2 py-0.5 hover:border-brand-sapphire">
-    <span class="font-mono">${esc(q)}</span>
-    <button type="button"
-            aria-label="Remove favourite"
-            data-q="${esc(q)}"
-            onclick="event.preventDefault(); event.stopPropagation(); removeFavourite(this.dataset.q)"
-            class="opacity-0 group-hover/fav:opacity-100 text-neutral-400 hover:text-red-600 leading-none"
-        >&times;</button>
-</a>`;
-            }
-
             function renderFavourites() {
+                // Returns the HTML for a single favourite chip.
+                function renderFavouriteChip(q) {
+                    const url = "/?q=" + encodeURIComponent(q);
+                    return `
+  <a href="${esc(url)}"
+     class="group/fav inline-flex items-center gap-1 bg-white border border-neutral-200 rounded px-2 py-0.5 hover:border-brand-sapphire">
+      <span class="font-mono">${esc(q)}</span>
+      <button type="button"
+              aria-label="Remove favourite"
+              data-q="${esc(q)}"
+              onclick="event.preventDefault(); event.stopPropagation(); removeFavourite(this.dataset.q)"
+              class="opacity-0 group-hover/fav:opacity-100 text-neutral-400 hover:text-red-600 leading-none"
+          >&times;</button>
+  </a>`;
+                }
+
                 const favs = loadFavourites();
                 const container = document.querySelector("#favourites");
                 if (favs.length === 0) {
@@ -115,6 +116,67 @@
                 const q =
                     new URL(window.location.href).searchParams.get("q") || "";
                 setQuery(q);
+            });
+
+            // Download all search results as csv or vcf
+            function downloadAll(format) {
+                const q = document.querySelector('input[name="q"]').value;
+                const params = new URLSearchParams({ format });
+                if (q) params.set("q", q);
+                window.location.assign("/contacts?" + params);
+            }
+
+            // QR tooltip
+            let qrTooltip = null;
+            let qrHoveredBtn = null;
+            function getQRTooltip() {
+                if (!qrTooltip) {
+                    qrTooltip = document.createElement("div");
+                    qrTooltip.id = "qr-tooltip";
+                    qrTooltip.className =
+                        "fixed hidden bg-white border border-neutral-200 shadow-lg p-2 z-50";
+                    document.body.appendChild(qrTooltip);
+                }
+                return qrTooltip;
+            }
+
+            // Show QR for the contact's vCard while hovering its export button.
+            document.addEventListener("mouseover", (e) => {
+                if (e.target.closest("#qr-tooltip")) return;
+                const btn = e.target.closest("[data-vcard]");
+                if (btn === qrHoveredBtn) return;
+                qrHoveredBtn = btn;
+                const tooltip = getQRTooltip();
+                if (!btn) {
+                    tooltip.classList.add("hidden");
+                    return;
+                }
+
+                const utf8 = new TextEncoder().encode(btn.dataset.vcard);
+                const qr = qrcode(0, "L");
+                qr.addData(String.fromCharCode(...utf8), "Byte");
+                qr.make();
+                // Set content of the tooltip
+                tooltip.innerHTML = `
+                    ${qr.createImgTag(4, 8)}
+                    <div class="text-center text-[10px] text-neutral-500 mt-1">Click to download contact</div>
+                    <div class="text-center text-[10px] text-neutral-400 font-mono mt-0.5">ID: ${esc(btn.dataset.id)}</div>
+                `;
+                const rect = btn.getBoundingClientRect();
+                const size = 180;
+                tooltip.style.left = `${rect.right}px`;
+                tooltip.style.top = `${Math.max(8, rect.top - size / 2)}px`;
+                tooltip.classList.remove("hidden");
+            });
+
+            // Download the contact as a .vcf file.
+            document.addEventListener("click", (e) => {
+                const btn = e.target.closest("[data-id]");
+                if (!btn) return;
+                const q = `id:${btn.dataset.id}`;
+                window.location.assign(
+                    `/contacts?q=${encodeURIComponent(q)}&format=vcf`,
+                );
             });
 
             // HTML-escape a value used inside text content or an attribute.
@@ -209,6 +271,55 @@
                         />
                     </svg>
                 </button>
+
+                <!-- Export dropdown (CSV / vCard) -->
+                <div class="group relative inline-flex items-center">
+                    <button
+                        type="button"
+                        aria-label="Export results"
+                        class="inline-flex items-center text-neutral-400 hover:text-white"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                            />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                    </button>
+                    <div
+                        class="hidden group-hover:block group-focus-within:block absolute right-0 top-full pt-2 z-50"
+                    >
+                        <div
+                            class="bg-white text-neutral-900 text-xs shadow-lg rounded border border-neutral-200 py-1 min-w-[10rem]"
+                        >
+                            <button
+                                type="button"
+                                hx-on:click="downloadAll('csv')"
+                                class="block w-full text-left px-3 py-1.5 hover:bg-neutral-100"
+                            >
+                                Download as CSV
+                            </button>
+                            <button
+                                type="button"
+                                hx-on:click="downloadAll('vcf')"
+                                class="block w-full text-left px-3 py-1.5 hover:bg-neutral-100"
+                            >
+                                Download as vCard
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Query help tooltip -->
                 <div class="group relative inline-flex items-center">
@@ -370,8 +481,9 @@
             <!--NOT a table because this allows us to NOT render rows outside of the viewport. Tested with 7k rows, rendering speedup of around 50x -->
             <div id="results" class="self-start w-full text-xs">
                 <div
-                    class="grid grid-cols-5 sticky top-0 bg-white z-10 text-[10px] uppercase tracking-wider text-brand-anthracite border-b border-neutral-300 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.04)] [&>*]:px-3 [&>*]:py-2 [&>*]:font-semibold"
+                    class="grid grid-cols-[1.25rem_repeat(5,1fr)] sticky top-0 bg-white z-10 text-[10px] uppercase tracking-wider text-brand-anthracite border-b border-neutral-300 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.04)] [&>*]:py-2 [&>*:not(:first-child)]:px-3 [&>*]:font-semibold"
                 >
+                    <div></div>
                     <div>Name</div>
                     <div>Org</div>
                     <div>Email</div>

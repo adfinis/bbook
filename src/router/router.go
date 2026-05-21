@@ -1,6 +1,7 @@
 package router
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"html/template"
 	"log"
@@ -18,7 +19,7 @@ import (
 var tmpl = template.Must(template.ParseFS(templates.FS, "*.tmpl"))
 
 // Contacts are returned one page at a time
-const pageSize = 900
+const pageSize = 500
 
 type indexTmplData struct {
 	Query      string
@@ -121,11 +122,46 @@ func Router() *mux.Router {
 			return
 		}
 
+		// Format of contacts
+		accept := r.Header.Get("Accept")
+		switch r.URL.Query().Get("format") {
+		case "json":
+			accept = "application/json"
+		case "csv":
+			accept = "text/csv"
+		case "vcf":
+			accept = "text/vcard"
+		}
+
 		// application/json
-		if strings.Contains(r.Header.Get("Accept"), "application/json") {
+		if strings.Contains(accept, "application/json") {
 			w.Header().Set("Content-Type", "application/json")
 			if err := json.NewEncoder(w).Encode(contacts); err != nil {
 				log.Printf("encoding contacts json: %v", err)
+			}
+			return
+		}
+
+		// text/csv
+		if strings.Contains(accept, "text/csv") {
+			w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+			w.Header().Set("Content-Disposition", `attachment; filename="contacts.csv"`)
+			cw := csv.NewWriter(w)
+			defer cw.Flush()
+			cw.Write(database.ContactCSVHeader())
+			for _, c := range contacts {
+				cw.Write(c.ToCSV())
+			}
+			return
+		}
+
+		// text/vcard
+		if strings.Contains(accept, "text/vcard") {
+			w.Header().Set("Content-Type", "text/vcard; charset=utf-8")
+			w.Header().Set("Content-Disposition", `attachment; filename="contacts.vcf"`)
+			for _, c := range contacts {
+				w.Write([]byte(c.VCard()))
+				w.Write([]byte("\r\n"))
 			}
 			return
 		}
