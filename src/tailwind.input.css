@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@source "./templates";
+
+@theme {
+    --color-brand-sapphire: #2E4B98;
+    --color-brand-biscay: #1C2E5D;
+    --color-brand-stone: #0F0F0F;
+    --color-brand-sunglow: #FFCA31;
+    --color-brand-prismarine: #249087;
+    --color-brand-anthracite: #484848;
+    --color-brand-grey: #8B8B8C;
+    --color-brand-neutral: #F5F6F5;
+}

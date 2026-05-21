@@ -5,26 +5,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>bbook</title>
         <link rel="icon" type="image/png" href="/static/adfinis-favicon.png" />
+        <link rel="stylesheet" href="/static/tailwind.css" />
         <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-        <script src="https://cdn.tailwindcss.com"></script>
         <script>
-            tailwind.config = {
-                theme: {
-                    extend: {
-                        colors: {
-                            "brand-sapphire": "#2E4B98",
-                            "brand-biscay": "#1C2E5D",
-                            "brand-stone": "#0F0F0F",
-                            "brand-sunglow": "#FFCA31",
-                            "brand-prismarine": "#249087",
-                            "brand-anthracite": "#484848",
-                            "brand-grey": "#8B8B8C",
-                            "brand-neutral": "#F5F6F5",
-                        },
-                    },
-                },
-            };
-
             const FAV_KEY = "bbook.favourites";
 
             function loadFavourites() {
@@ -365,67 +348,74 @@
                 </div>
             </nav>
 
-            <table
-                id="results"
-                class="self-start mx-auto w-full min-w-0 table-fixed border-collapse text-xs"
-            >
-                <thead
-                    class="sticky top-0 bg-white text-[10px] uppercase tracking-wider text-brand-anthracite border-b border-neutral-300 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.04)] [&>tr>th]:text-left [&>tr>th]:px-3 [&>tr>th]:py-2 [&>tr>th]:font-semibold"
+            <!--Search results-->
+            <!--NOT a table because this allows us to NOT render rows outside of the viewport. Tested with 7k rows, rendering sppedup of around 50x -->
+            <div id="results" class="self-start w-full text-xs">
+                <div
+                    class="grid grid-cols-5 sticky top-0 bg-white z-10 text-[10px] uppercase tracking-wider text-brand-anthracite border-b border-neutral-300 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.04)] [&>*]:px-3 [&>*]:py-2 [&>*]:font-semibold"
                 >
-                    <tr>
-                        <th>Name</th>
-                        <th>Org</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Address</th>
-                    </tr>
-                </thead>
-                <tbody
-                    class="divide-y divide-neutral-100 [&_td]:px-3 [&_td]:py-1.5 [&_a:hover]:text-brand-sapphire [&_a:hover]:underline"
+                    <div>Name</div>
+                    <div>Org</div>
+                    <div>Email</div>
+                    <div>Phone</div>
+                    <div>Address</div>
+                </div>
+                {{ range .Contacts }}
+                <div
+                    class="grid grid-cols-5 border-b border-neutral-100 [content-visibility:auto] [contain-intrinsic-size:0_28px] hover:bg-brand-neutral"
                 >
-                    {{ range .Contacts }}
-                    <tr class="hover:bg-brand-neutral align-top">
-                        <td
-                            class="truncate font-medium text-brand-stone"
-                            title="{{ .FullName }}"
+                    <div
+                        class="px-3 py-1.5 truncate min-w-0 font-medium text-brand-stone"
+                        title="{{ .FullName }}"
+                    >
+                        {{ .FullName }}
+                    </div>
+                    <div
+                        class="px-3 py-1.5 truncate min-w-0 text-neutral-700 cursor-pointer hover:text-brand-sapphire"
+                        title="{{ .Org }}"
+                        data-org="{{ .Org }}"
+                    >
+                        {{ .Org }}
+                    </div>
+                    <div
+                        class="px-3 py-1.5 truncate min-w-0 text-neutral-700"
+                        title="{{ .Email }}"
+                    >
+                        {{- if .Email -}}
+                        <a
+                            href="mailto:{{ .Email }}"
+                            class="hover:text-brand-sapphire hover:underline"
+                            >{{ .Email }}</a
                         >
-                            {{ .FullName }}
-                        </td>
-                        <td
-                            class="truncate text-neutral-700 cursor-pointer hover:text-brand-sapphire"
-                            title="{{ .Org }}"
-                            data-org="{{ .Org }}"
+                        {{- end -}}
+                    </div>
+                    <div
+                        class="px-3 py-1.5 truncate min-w-0 text-neutral-700 flex gap-3 tabular-nums"
+                        title="{{- if .Phone }}{{ .Phone }}{{ end -}}{{- if and .Phone .Mobile }} | {{ end -}}{{- if .Mobile }}{{ .Mobile }}{{ end -}}"
+                    >
+                        {{- if .Phone }}
+                        <a
+                            href="tel:{{ .Phone }}"
+                            class="hover:text-brand-sapphire hover:underline"
+                            >{{ .Phone }}</a
                         >
-                            {{ .Org }}
-                        </td>
-                        <td
-                            class="truncate text-neutral-700"
-                            title="{{ .Email }}"
+                        {{ end -}} {{- if .Mobile }}
+                        <a
+                            href="tel:{{ .Mobile }}"
+                            class="hover:text-brand-sapphire hover:underline"
+                            >{{ .Mobile }}</a
                         >
-                            {{- if .Email -}}
-                            <a href="mailto:{{ .Email }}">{{ .Email }}</a>
-                            {{- end -}}
-                        </td>
-                        <td
-                            class="w-43 flex gap-3 truncate text-neutral-700 tabular-nums"
-                            title="{{- if .Phone }}{{ .Phone }}{{ end -}}{{- if and .Phone .Mobile }} | {{ end -}}{{- if .Mobile }}{{ .Mobile }}{{ end -}}"
-                        >
-                            {{- if .Phone }}
-                            <a href="tel:{{ .Phone }}">{{ .Phone }}</a>
-                            {{ end -}} {{- if .Mobile }}
-                            <a href="tel:{{ .Mobile }}">{{ .Mobile }}</a>
-                            {{ end -}}
-                        </td>
-                        <td
-                            class="truncate text-neutral-500"
-                            title="{{ .Address }}"
-                        >
-                            {{ .Address }}
-                        </td>
-                    </tr>
-                    {{ end }}
-                </tbody>
-            </table>
+                        {{ end -}}
+                    </div>
+                    <div
+                        class="px-3 py-1.5 truncate min-w-0 text-neutral-500"
+                        title="{{ .Address }}"
+                    >
+                        {{ .Address }}
+                    </div>
+                </div>
+                {{ end }}
+            </div>
         </div>
     </body>
 </html>
