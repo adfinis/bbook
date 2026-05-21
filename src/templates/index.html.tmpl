@@ -73,7 +73,18 @@
                 renderFavourites();
             }
 
-            // Sync the search input to the URL's q parameter when current URL changes
+            // Keep the URL in sync with the search input as the user types
+            document.addEventListener("input", (e) => {
+                if (e.target.name !== "q") return;
+                const q = e.target.value;
+                history.replaceState(
+                    null,
+                    "",
+                    q ? "/?q=" + encodeURIComponent(q) : "/",
+                );
+            });
+
+            // After back/forward (browser restores URL but not the input).
             window.addEventListener("popstate", () => {
                 const input = document.querySelector('input[name="q"]');
                 const url = new URL(window.location.href);
@@ -117,11 +128,10 @@
                     autocomplete="off"
                     autofocus
                     class="peer w-full bg-brand-anthracite text-white placeholder-neutral-400 border border-brand-anthracite rounded pl-2 pr-7 py-0.5 text-sm focus:outline-none focus:border-brand-sapphire [&::-webkit-search-cancel-button]:appearance-none"
-                    hx-get="/"
+                    hx-get="/contacts"
                     hx-trigger="input changed delay:500ms, search"
                     hx-target="#contacts-rows"
                     hx-swap="innerHTML"
-                    hx-push-url="true"
                 />
                 <a
                     href="/"
