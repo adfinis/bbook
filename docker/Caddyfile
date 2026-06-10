@@ -2,9 +2,6 @@
   email albert.cerfeda@adfinis.com
 }
 
-www.app.vsos.ethz.ch app.vsos.ethz.ch {
-	redir {$BBOOK_SCHEME}://{$BBOOK_HOSTNAME}
-}
 
 {$BBOOK_SCHEME}://{$BBOOK_HOSTNAME} {$BBOOK_SCHEME}://www.{$BBOOK_HOSTNAME} {
 	log {

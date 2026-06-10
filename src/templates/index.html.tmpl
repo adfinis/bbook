@@ -48,7 +48,7 @@
               aria-label="Remove favourite"
               data-q="${esc(q)}"
               onclick="event.preventDefault(); event.stopPropagation(); removeFavourite(this.dataset.q)"
-              class="opacity-0 group-hover/fav:opacity-100 text-neutral-400 hover:text-red-600 leading-none"
+              class="text-neutral-400 hover:text-red-600 leading-none"
           >&times;</button>
   </a>`;
                 }
@@ -226,7 +226,7 @@
         class="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-sm"
     >
         <header
-            class="bg-brand-stone text-white px-3 py-2.5 flex items-center gap-3 shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_1px_2px_0_rgba(0,0,0,0.15)]"
+            class="bg-brand-stone w-full text-white px-3 py-2.5 flex flex-wrap items-center gap-3 shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_1px_2px_0_rgba(0,0,0,0.15)]"
         >
             <a
                 href="/"
@@ -238,9 +238,9 @@
                     alt="Adfinis"
                     class="h-4 w-auto"
                 />
-                <span class="font-medium">bbook</span>
+                <span class="hidden md:inline font-medium">bbook</span>
             </a>
-            <div class="flex-1 max-w-md relative">
+            <div class="flex-1 min-w-[12rem] max-w-md relative">
                 <input
                     name="q"
                     type="search"
@@ -282,7 +282,7 @@
                     type="button"
                     aria-label="Save query as favourite"
                     onclick="addCurrentFavourite()"
-                    class="inline-flex items-center text-neutral-400 hover:text-brand-sunglow"
+                    class="inline-flex items-center justify-center h-8 w-8 text-neutral-400 hover:text-brand-sunglow"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -306,7 +306,7 @@
                     <button
                         type="button"
                         aria-label="Export results"
-                        class="inline-flex items-center text-neutral-400 hover:text-white"
+                        class="inline-flex items-center justify-center h-8 w-8 text-neutral-400 hover:text-white"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -355,7 +355,7 @@
                     <button
                         type="button"
                         aria-label="Search syntax help"
-                        class="inline-flex items-center text-neutral-400 hover:text-white"
+                        class="inline-flex items-center justify-center h-8 w-8 text-neutral-400 hover:text-white"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -485,88 +485,57 @@
                 <span class="text-xs text-neutral-400"
                     >{{ .TotalRows }} contacts</span
                 >
+
+                <!-- Theme toggle-->
+                <button
+                    type="button"
+                    aria-label="Toggle dark mode"
+                    onclick="toggleTheme()"
+                    class="inline-flex items-center justify-center h-8 w-8 text-neutral-400 hover:text-white"
+                >
+                    <!-- Moon -->
+                    <svg
+                        id="theme-icon-moon"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+                    </svg>
+                    <!-- Sun -->
+                    <svg
+                        id="theme-icon-sun"
+                        class="hidden"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <circle cx="12" cy="12" r="4" />
+                        <path d="M12 2v2" />
+                        <path d="M12 20v2" />
+                        <path d="m4.93 4.93 1.41 1.41" />
+                        <path d="m17.66 17.66 1.41 1.41" />
+                        <path d="M2 12h2" />
+                        <path d="M20 12h2" />
+                        <path d="m6.34 17.66-1.41 1.41" />
+                        <path d="m19.07 4.93-1.41 1.41" />
+                    </svg>
+                </button>
             </div>
 
             <!-- Active-development notice -->
-            <div
-                class="ml-auto inline-flex items-center gap-1.5 py-2 px-2 py-0.5 text-[10px] text-neutral-300"
-            >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    class="text-brand-sunglow shrink-0"
-                >
-                    <path
-                        d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"
-                    />
-                    <path d="M12 9v4" />
-                    <path d="M12 17h.01" />
-                </svg>
-                <span
-                    >WIP -
-                    <a
-                        href="https://git.adfinis.com/albertc/bbook/-/issues"
-                        target="_blank"
-                        class="underline hover:text-white"
-                        >make a suggestion</a
-                    ></span
-                >
-            </div>
-
-            <!-- Theme toggle-->
-            <button
-                type="button"
-                aria-label="Toggle dark mode"
-                onclick="toggleTheme()"
-                class="inline-flex items-center text-neutral-400 hover:text-white"
-            >
-                <!-- Moon -->
-                <svg
-                    id="theme-icon-moon"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-                </svg>
-                <!-- Sun -->
-                <svg
-                    id="theme-icon-sun"
-                    class="hidden"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <circle cx="12" cy="12" r="4" />
-                    <path d="M12 2v2" />
-                    <path d="M12 20v2" />
-                    <path d="m4.93 4.93 1.41 1.41" />
-                    <path d="m17.66 17.66 1.41 1.41" />
-                    <path d="M2 12h2" />
-                    <path d="M20 12h2" />
-                    <path d="m6.34 17.66-1.41 1.41" />
-                    <path d="m19.07 4.93-1.41 1.41" />
-                </svg>
-            </button>
         </header>
 
         <!-- Favourite queries -->
@@ -582,13 +551,15 @@
             syncThemeIcon(document.documentElement.classList.contains("dark"));
         </script>
 
-        <div class="flex">
+        <div class="flex flex-col md:flex-row">
             <!-- A–Z sidebar -->
             <nav
                 aria-label="Jump to letter"
-                class="w-7 bg-brand-neutral dark:bg-neutral-800 border-r border-neutral-200 dark:border-neutral-700 text-[10px] font-medium text-neutral-500 select-none [&_button]:py-0.5 [&_button]:cursor-pointer [&_button]:hover:text-brand-sapphire"
+                class="w-full md:w-7 bg-brand-neutral dark:bg-neutral-800 border-b md:border-b-0 md:border-r border-neutral-200 dark:border-neutral-700 text-[10px] font-medium text-neutral-500 select-none [&_button]:cursor-pointer [&_button]:hover:text-brand-sapphire [&_button]:py-2 md:[&_button]:py-0.5 [&_button]:flex-1 md:[&_button]:flex-none"
             >
-                <div class="sticky top-0 flex flex-col items-stretch py-2">
+                <div
+                    class="md:sticky md:top-0 flex md:flex-col items-stretch md:py-2 justify-around md:justify-start"
+                >
                     <button hx-on:click="setQuery('lastname:a*')">A</button>
                     <button hx-on:click="setQuery('lastname:b*')">B</button>
                     <button hx-on:click="setQuery('lastname:c*')">C</button>
@@ -619,13 +590,15 @@
             </nav>
 
             <!--Search results-->
-            <!--NOT a table because this allows us to NOT render rows outside of the viewport. Tested with 7k rows, rendering speedup of around 50x -->
-            <div id="results" class="self-start w-full text-xs">
+            <div
+                id="results"
+                class="self-start w-full min-w-0 overflow-x-auto lg:overflow-x-visible text-xs [--cols:1.25rem_11rem_14rem_16rem_12rem_25rem] lg:[--cols:1.25rem_repeat(5,1fr)] [scrollbar-width:thin] [scrollbar-color:#a3a3a3_transparent] dark:[scrollbar-color:#525252_transparent]"
+            >
                 <div
-                    class="grid grid-cols-[1.25rem_repeat(5,1fr)] sticky top-0 bg-white dark:bg-neutral-900 z-10 text-[10px] uppercase tracking-wider text-brand-anthracite dark:text-neutral-400 border-b border-neutral-300 dark:border-neutral-700 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.04)] [&>*]:py-2 [&>*:not(:first-child)]:px-3 [&>*]:font-semibold"
+                    class="grid grid-cols-[var(--cols)] min-w-max lg:min-w-0 sticky top-0 bg-white dark:bg-neutral-900 z-10 text-[10px] uppercase tracking-wider text-brand-anthracite dark:text-neutral-400 border-b border-neutral-300 dark:border-neutral-700 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.04)] [&>*]:py-2 [&>*:not(:first-child)]:px-3 [&>*]:font-semibold"
                 >
                     <div></div>
-                    <div>Name</div>
+                    <div class="sticky left-0 lg:static">Name</div>
                     <div>Org</div>
                     <div>Email</div>
                     <div>Phone</div>

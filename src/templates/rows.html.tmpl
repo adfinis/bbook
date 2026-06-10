@@ -1,6 +1,6 @@
 {{ $rowHeight := "29px" }} {{ range .Contacts }}
 <div
-    class="grid grid-cols-[1.25rem_repeat(5,1fr)] border-b border-neutral-100 dark:border-neutral-800 [content-visibility:auto] hover:bg-brand-neutral dark:hover:bg-neutral-800 group/row"
+    class="grid grid-cols-[var(--cols)] min-w-max lg:min-w-0 border-b border-neutral-100 dark:border-neutral-800 [content-visibility:auto] hover:bg-brand-neutral dark:hover:bg-neutral-800 group/row"
     style="height: {{ $rowHeight }}"
 >
     <button
@@ -8,7 +8,7 @@
         aria-label="Export contact"
         data-id="{{ .ID }}"
         data-vcard="{{ .VCard }}"
-        class="py-1.5 flex items-center justify-center opacity-0 group-hover/row:opacity-100 text-neutral-400 hover:text-brand-sapphire cursor-pointer"
+        class="py-1.5 flex items-center justify-center opacity-100 md:opacity-0 md:group-hover/row:opacity-100 text-neutral-400 hover:text-brand-sapphire cursor-pointer"
     >
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -36,7 +36,7 @@
         </svg>
     </button>
     <div
-        class="px-3 py-1.5 truncate min-w-0 font-medium text-brand-stone dark:text-neutral-100"
+        class="px-3 py-1.5 truncate min-w-0 font-medium text-brand-stone dark:text-neutral-100 sticky left-0 bg-white dark:bg-neutral-900 lg:static lg:bg-transparent"
         title="{{ .FullName }}"
     >
         {{ .FullName }}
