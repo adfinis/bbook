@@ -19,3 +19,12 @@
     --color-brand-sapphire: #6b8ad1;
     --color-brand-neutral: #fafafa;
 }
+
+@layer components {
+    .btn-header {
+        @apply inline-flex items-center justify-center h-8 w-8 text-neutral-400;
+    }
+    .cell-link {
+        @apply hover:text-brand-sapphire hover:underline;
+    }
+}

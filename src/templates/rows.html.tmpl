@@ -1,14 +1,13 @@
-{{ $rowHeight := "29px" }} {{ range .Contacts }}
+{{ range .Contacts }}
 <div
-    class="grid grid-cols-[var(--cols)] min-w-max lg:min-w-0 border-b border-neutral-100 dark:border-neutral-800 [content-visibility:auto] hover:bg-brand-neutral dark:hover:bg-neutral-800 group/row"
-    style="height: {{ $rowHeight }}"
+    class="grid grid-cols-[var(--cols)] min-w-max lg:min-w-0 h-[var(--row-h)] border-b border-neutral-100 dark:border-neutral-800 [content-visibility:auto] hover:bg-brand-neutral dark:hover:bg-neutral-800 group/row"
 >
     <button
         type="button"
         aria-label="Export contact"
         data-id="{{ .ID }}"
         data-vcard="{{ .VCard }}"
-        class="py-1.5 flex items-center justify-center opacity-100 md:opacity-0 md:group-hover/row:opacity-100 text-neutral-400 hover:text-brand-sapphire cursor-pointer"
+        class="py-1.5 flex items-center justify-center opacity-100 lg:opacity-0 lg:group-hover/row:opacity-100 text-neutral-400 hover:text-brand-sapphire cursor-pointer"
     >
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -56,7 +55,7 @@
         {{- if .Email -}}
         <a
             href="mailto:{{ .Email }}"
-            class="hover:text-brand-sapphire hover:underline"
+            class="cell-link"
             >{{ .Email }}</a
         >
         {{- end -}}
@@ -68,13 +67,13 @@
         {{- if .Phone }}
         <a
             href="tel:{{ .Phone }}"
-            class="hover:text-brand-sapphire hover:underline"
+            class="cell-link"
             >{{ .Phone }}</a
         >
         {{ end -}} {{- if .Mobile }}
         <a
             href="tel:{{ .Mobile }}"
-            class="hover:text-brand-sapphire hover:underline"
+            class="cell-link"
             >{{ .Mobile }}</a
         >
         {{ end -}}
@@ -90,7 +89,7 @@
 <!-- For each subsequent page, we render a placeholder such that when its scrolled into view, the page is fetched and the page placeholder is replaced. -->
 {{ range .Spacers }}
 <div
-    style="height: calc({{ .Count }} * {{ $rowHeight }})"
+    style="height: calc({{ .Count }} * var(--row-h))"
     hx-get="/contacts?q={{ .Query | urlquery }}&page={{ .Page }}"
     hx-trigger="intersect once"
     hx-swap="outerHTML"

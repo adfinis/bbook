@@ -223,7 +223,7 @@
         </script>
     </head>
     <body
-        class="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-sm"
+        class="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100"
     >
         <header
             class="bg-brand-stone w-full text-white px-3 py-2.5 flex flex-wrap items-center gap-3 shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_1px_2px_0_rgba(0,0,0,0.15)]"
@@ -282,7 +282,7 @@
                     type="button"
                     aria-label="Save query as favourite"
                     onclick="addCurrentFavourite()"
-                    class="inline-flex items-center justify-center h-8 w-8 text-neutral-400 hover:text-brand-sunglow"
+                    class="btn-header hover:text-brand-sunglow"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -306,7 +306,7 @@
                     <button
                         type="button"
                         aria-label="Export results"
-                        class="inline-flex items-center justify-center h-8 w-8 text-neutral-400 hover:text-white"
+                        class="btn-header hover:text-white"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -355,7 +355,7 @@
                     <button
                         type="button"
                         aria-label="Search syntax help"
-                        class="inline-flex items-center justify-center h-8 w-8 text-neutral-400 hover:text-white"
+                        class="btn-header hover:text-white"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -374,7 +374,7 @@
                         </svg>
                     </button>
                     <div
-                        class="hidden group-hover:block group-focus-within:block absolute right-0 top-full pt-2 w-80 z-50"
+                        class="hidden group-hover:block group-focus-within:block absolute md:right-0 top-full pt-2 w-80 z-50"
                     >
                         <div
                             class="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 text-xs shadow-lg rounded border border-neutral-200 dark:border-neutral-700 p-3"
@@ -395,79 +395,31 @@
                             ><br />
                             Examples:
                             <dl
-                                class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 mt-1 items-baseline"
+                                class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 mt-1 items-baseline [&>dt]:font-mono [&>dt]:text-brand-sapphire [&>dd]:text-neutral-600 dark:[&>dd]:text-neutral-400"
                             >
-                                <dt class="font-mono text-brand-sapphire">
-                                    lunkwill
-                                </dt>
-                                <dd
-                                    class="text-neutral-600 dark:text-neutral-400"
-                                >
-                                    exact term match in any field
-                                </dd>
+                                <dt>lunkwill</dt>
+                                <dd>exact term match in any field</dd>
 
-                                <dt class="font-mono text-brand-sapphire">
-                                    lunk*
-                                </dt>
-                                <dd
-                                    class="text-neutral-600 dark:text-neutral-400"
-                                >
-                                    wildcard
-                                </dd>
+                                <dt>lunk*</dt>
+                                <dd>wildcard</dd>
 
-                                <dt class="font-mono text-brand-sapphire">
-                                    org:adfinis
-                                </dt>
-                                <dd
-                                    class="text-neutral-600 dark:text-neutral-400"
-                                >
-                                    specific field
-                                </dd>
+                                <dt>org:adfinis</dt>
+                                <dd>specific field</dd>
 
-                                <dt class="font-mono text-brand-sapphire">
-                                    +a +b
-                                </dt>
-                                <dd
-                                    class="text-neutral-600 dark:text-neutral-400"
-                                >
-                                    both required
-                                </dd>
+                                <dt>+a +b</dt>
+                                <dd>both required</dd>
 
-                                <dt class="font-mono text-brand-sapphire">
-                                    a AND b
-                                </dt>
-                                <dd
-                                    class="text-neutral-600 dark:text-neutral-400"
-                                >
-                                    same as above
-                                </dd>
+                                <dt>a AND b</dt>
+                                <dd>same as above</dd>
 
-                                <dt class="font-mono text-brand-sapphire">
-                                    a OR b
-                                </dt>
-                                <dd
-                                    class="text-neutral-600 dark:text-neutral-400"
-                                >
-                                    either term
-                                </dd>
+                                <dt>a OR b</dt>
+                                <dd>either term</dd>
 
-                                <dt class="font-mono text-brand-sapphire">
-                                    -Microslop
-                                </dt>
-                                <dd
-                                    class="text-neutral-600 dark:text-neutral-400"
-                                >
-                                    exclude term
-                                </dd>
+                                <dt>-Microslop</dt>
+                                <dd>exclude term</dd>
 
-                                <dt class="font-mono text-brand-sapphire">
-                                    "exact phrase"
-                                </dt>
-                                <dd
-                                    class="text-neutral-600 dark:text-neutral-400"
-                                >
-                                    phrase match
-                                </dd>
+                                <dt>"exact phrase"</dt>
+                                <dd>phrase match</dd>
                             </dl>
                             <div
                                 class="mt-2 pt-2 border-t border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400"
@@ -491,7 +443,7 @@
                     type="button"
                     aria-label="Toggle dark mode"
                     onclick="toggleTheme()"
-                    class="inline-flex items-center justify-center h-8 w-8 text-neutral-400 hover:text-white"
+                    class="btn-header hover:text-white"
                 >
                     <!-- Moon -->
                     <svg
@@ -534,8 +486,6 @@
                     </svg>
                 </button>
             </div>
-
-            <!-- Active-development notice -->
         </header>
 
         <!-- Favourite queries -->
@@ -592,7 +542,7 @@
             <!--Search results-->
             <div
                 id="results"
-                class="self-start w-full min-w-0 overflow-x-auto lg:overflow-x-visible text-xs [--cols:1.25rem_11rem_14rem_16rem_12rem_25rem] lg:[--cols:1.25rem_repeat(5,1fr)] [scrollbar-width:thin] [scrollbar-color:#a3a3a3_transparent] dark:[scrollbar-color:#525252_transparent]"
+                class="self-start w-full min-w-0 overflow-x-auto lg:overflow-x-visible text-xs [--cols:1.25rem_11rem_14rem_16rem_12rem_25rem] lg:[--cols:1.25rem_repeat(5,1fr)] [--row-h:29px] [scrollbar-width:thin] [scrollbar-color:#a3a3a3_transparent] dark:[scrollbar-color:#525252_transparent]"
             >
                 <div
                     class="grid grid-cols-[var(--cols)] min-w-max lg:min-w-0 sticky top-0 bg-white dark:bg-neutral-900 z-10 text-[10px] uppercase tracking-wider text-brand-anthracite dark:text-neutral-400 border-b border-neutral-300 dark:border-neutral-700 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.04)] [&>*]:py-2 [&>*:not(:first-child)]:px-3 [&>*]:font-semibold"
