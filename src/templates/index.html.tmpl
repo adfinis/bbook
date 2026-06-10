@@ -4,6 +4,19 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>bbook</title>
+        <!--Restore theme -->
+        <script>
+            (function () {
+                try {
+                    const stored = localStorage.getItem("bbook.theme");
+                    const dark = stored
+                        ? stored === "dark"
+                        : window.matchMedia("(prefers-color-scheme: dark)")
+                              .matches;
+                    document.documentElement.classList.toggle("dark", dark);
+                } catch {}
+            })();
+        </script>
         <link rel="icon" type="image/png" href="/static/adfinis-favicon.png" />
         <link rel="stylesheet" href="/static/tailwind.css" />
         <script src="https://unpkg.com/htmx.org@2.0.4"></script>
@@ -29,7 +42,7 @@
                     const url = "/?q=" + encodeURIComponent(q);
                     return `
   <a href="${esc(url)}"
-     class="group/fav inline-flex items-center gap-1 bg-white border border-neutral-200 rounded px-2 py-0.5 hover:border-brand-sapphire">
+     class="group/fav inline-flex items-center gap-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded px-2 py-0.5 hover:border-brand-sapphire">
       <span class="font-mono">${esc(q)}</span>
       <button type="button"
               aria-label="Remove favourite"
@@ -72,6 +85,20 @@
             function removeFavourite(q) {
                 saveFavourites(loadFavourites().filter((f) => f !== q));
                 renderFavourites();
+            }
+
+            function toggleTheme() {
+                const dark = document.documentElement.classList.toggle("dark");
+                localStorage.setItem("bbook.theme", dark ? "dark" : "light");
+                syncThemeIcon(dark);
+            }
+
+            function syncThemeIcon(dark) {
+                const sun = document.getElementById("theme-icon-sun");
+                const moon = document.getElementById("theme-icon-moon");
+                if (!sun || !moon) return;
+                sun.classList.toggle("hidden", !dark);
+                moon.classList.toggle("hidden", dark);
             }
 
             // Sets the active URL. Makes sure the input and the URL are synced, then triggers an htmx event for fetching the results.
@@ -134,7 +161,7 @@
                     qrTooltip = document.createElement("div");
                     qrTooltip.id = "qr-tooltip";
                     qrTooltip.className =
-                        "fixed hidden bg-white border border-neutral-200 shadow-lg p-2 z-50";
+                        "fixed hidden bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-lg p-2 z-50";
                     document.body.appendChild(qrTooltip);
                 }
                 return qrTooltip;
@@ -195,7 +222,9 @@
             }
         </script>
     </head>
-    <body class="bg-white text-neutral-900 text-sm">
+    <body
+        class="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-sm"
+    >
         <header
             class="bg-brand-stone text-white px-3 py-2.5 flex items-center gap-3 shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_1px_2px_0_rgba(0,0,0,0.15)]"
         >
@@ -301,19 +330,19 @@
                         class="hidden group-hover:block group-focus-within:block absolute right-0 top-full pt-2 z-50"
                     >
                         <div
-                            class="bg-white text-neutral-900 text-xs shadow-lg rounded border border-neutral-200 py-1 min-w-[10rem]"
+                            class="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 text-xs shadow-lg rounded border border-neutral-200 dark:border-neutral-700 py-1 min-w-[10rem]"
                         >
                             <button
                                 type="button"
                                 hx-on:click="downloadAll('csv')"
-                                class="block w-full text-left px-3 py-1.5 hover:bg-neutral-100"
+                                class="block w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700"
                             >
                                 Download as CSV
                             </button>
                             <button
                                 type="button"
                                 hx-on:click="downloadAll('vcf')"
-                                class="block w-full text-left px-3 py-1.5 hover:bg-neutral-100"
+                                class="block w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700"
                             >
                                 Download as vCard
                             </button>
@@ -348,10 +377,10 @@
                         class="hidden group-hover:block group-focus-within:block absolute right-0 top-full pt-2 w-80 z-50"
                     >
                         <div
-                            class="bg-white text-neutral-900 text-xs shadow-lg rounded border border-neutral-200 p-3"
+                            class="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 text-xs shadow-lg rounded border border-neutral-200 dark:border-neutral-700 p-3"
                         >
                             <div
-                                class="font-medium text-sm mb-2 text-brand-stone"
+                                class="font-medium text-sm mb-2 text-brand-stone dark:text-neutral-100"
                             >
                                 Search syntax
                             </div>
@@ -371,47 +400,77 @@
                                 <dt class="font-mono text-brand-sapphire">
                                     lunkwill
                                 </dt>
-                                <dd class="text-neutral-600">
+                                <dd
+                                    class="text-neutral-600 dark:text-neutral-400"
+                                >
                                     exact term match in any field
                                 </dd>
 
                                 <dt class="font-mono text-brand-sapphire">
                                     lunk*
                                 </dt>
-                                <dd class="text-neutral-600">wildcard</dd>
+                                <dd
+                                    class="text-neutral-600 dark:text-neutral-400"
+                                >
+                                    wildcard
+                                </dd>
 
                                 <dt class="font-mono text-brand-sapphire">
                                     org:adfinis
                                 </dt>
-                                <dd class="text-neutral-600">specific field</dd>
+                                <dd
+                                    class="text-neutral-600 dark:text-neutral-400"
+                                >
+                                    specific field
+                                </dd>
 
                                 <dt class="font-mono text-brand-sapphire">
                                     +a +b
                                 </dt>
-                                <dd class="text-neutral-600">both required</dd>
+                                <dd
+                                    class="text-neutral-600 dark:text-neutral-400"
+                                >
+                                    both required
+                                </dd>
 
                                 <dt class="font-mono text-brand-sapphire">
                                     a AND b
                                 </dt>
-                                <dd class="text-neutral-600">same as above</dd>
+                                <dd
+                                    class="text-neutral-600 dark:text-neutral-400"
+                                >
+                                    same as above
+                                </dd>
 
                                 <dt class="font-mono text-brand-sapphire">
                                     a OR b
                                 </dt>
-                                <dd class="text-neutral-600">either term</dd>
+                                <dd
+                                    class="text-neutral-600 dark:text-neutral-400"
+                                >
+                                    either term
+                                </dd>
 
                                 <dt class="font-mono text-brand-sapphire">
-                                    -BlackRock
+                                    -Microslop
                                 </dt>
-                                <dd class="text-neutral-600">exclude term</dd>
+                                <dd
+                                    class="text-neutral-600 dark:text-neutral-400"
+                                >
+                                    exclude term
+                                </dd>
 
                                 <dt class="font-mono text-brand-sapphire">
                                     "exact phrase"
                                 </dt>
-                                <dd class="text-neutral-600">phrase match</dd>
+                                <dd
+                                    class="text-neutral-600 dark:text-neutral-400"
+                                >
+                                    phrase match
+                                </dd>
                             </dl>
                             <div
-                                class="mt-2 pt-2 border-t border-neutral-200 text-neutral-600"
+                                class="mt-2 pt-2 border-t border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400"
                             >
                                 Fields:&nbsp;{{- range $i, $f := .FieldNames -}}
                                 {{- if $i }}, {{ end -}}
@@ -430,7 +489,7 @@
 
             <!-- Active-development notice -->
             <div
-                class="ml-auto inline-flex items-center gap-1.5 py-2 border border-brand-sunglow rounded px-2 py-0.5 text-[10px] text-neutral-300"
+                class="ml-auto inline-flex items-center gap-1.5 py-2 px-2 py-0.5 text-[10px] text-neutral-300"
             >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -451,34 +510,83 @@
                     <path d="M12 17h.01" />
                 </svg>
                 <span
-                    >in active development -
+                    >WIP -
                     <a
                         href="https://git.adfinis.com/albertc/bbook/-/issues"
                         target="_blank"
                         class="underline hover:text-white"
-                        >report an issue, make a suggestion</a
+                        >make a suggestion</a
                     ></span
                 >
             </div>
+
+            <!-- Theme toggle-->
+            <button
+                type="button"
+                aria-label="Toggle dark mode"
+                onclick="toggleTheme()"
+                class="inline-flex items-center text-neutral-400 hover:text-white"
+            >
+                <!-- Moon -->
+                <svg
+                    id="theme-icon-moon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+                </svg>
+                <!-- Sun -->
+                <svg
+                    id="theme-icon-sun"
+                    class="hidden"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <circle cx="12" cy="12" r="4" />
+                    <path d="M12 2v2" />
+                    <path d="M12 20v2" />
+                    <path d="m4.93 4.93 1.41 1.41" />
+                    <path d="m17.66 17.66 1.41 1.41" />
+                    <path d="M2 12h2" />
+                    <path d="M20 12h2" />
+                    <path d="m6.34 17.66-1.41 1.41" />
+                    <path d="m19.07 4.93-1.41 1.41" />
+                </svg>
+            </button>
         </header>
 
         <!-- Favourite queries -->
         <div
             id="favourites"
-            class="hidden flex flex-wrap items-center gap-1.5 px-3 py-1.5 bg-brand-neutral text-xs border-b border-neutral-200"
+            class="hidden flex flex-wrap items-center gap-1.5 px-3 py-1.5 bg-brand-neutral dark:bg-neutral-800 text-xs border-b border-neutral-200 dark:border-neutral-700"
         >
             <span class="text-neutral-500 mr-1"> Favourites: </span>
         </div>
 
         <script>
             renderFavourites();
+            syncThemeIcon(document.documentElement.classList.contains("dark"));
         </script>
 
         <div class="flex">
             <!-- A–Z sidebar -->
             <nav
                 aria-label="Jump to letter"
-                class="w-7 bg-brand-neutral border-r border-neutral-200 text-[10px] font-medium text-neutral-500 select-none [&_button]:py-0.5 [&_button]:cursor-pointer [&_button]:hover:text-brand-sapphire"
+                class="w-7 bg-brand-neutral dark:bg-neutral-800 border-r border-neutral-200 dark:border-neutral-700 text-[10px] font-medium text-neutral-500 select-none [&_button]:py-0.5 [&_button]:cursor-pointer [&_button]:hover:text-brand-sapphire"
             >
                 <div class="sticky top-0 flex flex-col items-stretch py-2">
                     <button hx-on:click="setQuery('lastname:a*')">A</button>
@@ -514,7 +622,7 @@
             <!--NOT a table because this allows us to NOT render rows outside of the viewport. Tested with 7k rows, rendering speedup of around 50x -->
             <div id="results" class="self-start w-full text-xs">
                 <div
-                    class="grid grid-cols-[1.25rem_repeat(5,1fr)] sticky top-0 bg-white z-10 text-[10px] uppercase tracking-wider text-brand-anthracite border-b border-neutral-300 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.04)] [&>*]:py-2 [&>*:not(:first-child)]:px-3 [&>*]:font-semibold"
+                    class="grid grid-cols-[1.25rem_repeat(5,1fr)] sticky top-0 bg-white dark:bg-neutral-900 z-10 text-[10px] uppercase tracking-wider text-brand-anthracite dark:text-neutral-400 border-b border-neutral-300 dark:border-neutral-700 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.04)] [&>*]:py-2 [&>*:not(:first-child)]:px-3 [&>*]:font-semibold"
                 >
                     <div></div>
                     <div>Name</div>

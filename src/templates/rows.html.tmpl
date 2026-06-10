@@ -1,6 +1,6 @@
 {{ $rowHeight := "29px" }} {{ range .Contacts }}
 <div
-    class="grid grid-cols-[1.25rem_repeat(5,1fr)] border-b border-neutral-100 [content-visibility:auto] hover:bg-brand-neutral group/row"
+    class="grid grid-cols-[1.25rem_repeat(5,1fr)] border-b border-neutral-100 dark:border-neutral-800 [content-visibility:auto] hover:bg-brand-neutral dark:hover:bg-neutral-800 group/row"
     style="height: {{ $rowHeight }}"
 >
     <button
@@ -36,13 +36,13 @@
         </svg>
     </button>
     <div
-        class="px-3 py-1.5 truncate min-w-0 font-medium text-brand-stone"
+        class="px-3 py-1.5 truncate min-w-0 font-medium text-brand-stone dark:text-neutral-100"
         title="{{ .FullName }}"
     >
         {{ .FullName }}
     </div>
     <button
-        class="px-3 py-1.5 truncate min-w-0 text-neutral-700 hover:text-brand-sapphire cursor-pointer text-left"
+        class="px-3 py-1.5 truncate min-w-0 text-neutral-700 dark:text-neutral-300 hover:text-brand-sapphire cursor-pointer text-left"
         title="{{ .Org }}"
         data-q='org:"{{ .Org }}"'
         hx-on:click="setQuery(this.dataset.q)"
@@ -50,7 +50,7 @@
         {{ .Org }}
     </button>
     <div
-        class="px-3 py-1.5 truncate min-w-0 text-neutral-700"
+        class="px-3 py-1.5 truncate min-w-0 text-neutral-700 dark:text-neutral-300"
         title="{{ .Email }}"
     >
         {{- if .Email -}}
@@ -62,7 +62,7 @@
         {{- end -}}
     </div>
     <div
-        class="px-3 py-1.5 truncate min-w-0 text-neutral-700 flex gap-3 tabular-nums"
+        class="px-3 py-1.5 truncate min-w-0 text-neutral-700 dark:text-neutral-300 flex gap-3 tabular-nums"
         title="{{- if .Phone }}{{ .Phone }}{{ end -}}{{- if and .Phone .Mobile }} | {{ end -}}{{- if .Mobile }}{{ .Mobile }}{{ end -}}"
     >
         {{- if .Phone }}
@@ -80,14 +80,15 @@
         {{ end -}}
     </div>
     <div
-        class="px-3 py-1.5 truncate min-w-0 text-neutral-500"
+        class="px-3 py-1.5 truncate min-w-0 text-neutral-500 dark:text-neutral-400"
         title="{{ .Address }}"
     >
         {{ .Address }}
     </div>
 </div>
+{{ end }}
 <!-- For each subsequent page, we render a placeholder such that when its scrolled into view, the page is fetched and the page placeholder is replaced. -->
-{{ end }} {{ range .Spacers }}
+{{ range .Spacers }}
 <div
     style="height: calc({{ .Count }} * {{ $rowHeight }})"
     hx-get="/contacts?q={{ .Query | urlquery }}&page={{ .Page }}"
