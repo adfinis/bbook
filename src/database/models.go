@@ -7,6 +7,8 @@ package database
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Contact struct {
@@ -24,4 +26,17 @@ type Contact struct {
 	ModifiedTime time.Time
 	Raw          json.RawMessage
 	SyncedAt     time.Time
+}
+
+type Token struct {
+	ID        uuid.UUID
+	UserSub   string
+	Name      string
+	CreatedAt time.Time
+}
+
+type UserOfflineToken struct {
+	UserSub      string
+	OfflineToken []byte
+	UpdatedAt    time.Time
 }

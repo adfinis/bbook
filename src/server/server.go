@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"git.adfinis.com/albertc/bbook/bbook-backend/auth"
 	"git.adfinis.com/albertc/bbook/bbook-backend/database"
 	"git.adfinis.com/albertc/bbook/bbook-backend/router"
 	"git.adfinis.com/albertc/bbook/bbook-backend/server/search"
@@ -42,6 +43,9 @@ func Start(ctx context.Context) error {
 		}
 		close(serverErr)
 	}()
+
+	// Periodic user access/mailclient token cleanup
+	go auth.StartTokenCleanup(ctx)
 
 	// Zoho sync job
 	go func() {

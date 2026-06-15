@@ -3,6 +3,7 @@ package router
 import (
 	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"git.adfinis.com/albertc/bbook/bbook-backend/server/search"
 	"git.adfinis.com/albertc/bbook/bbook-backend/static"
 	"git.adfinis.com/albertc/bbook/bbook-backend/templates"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
@@ -27,6 +29,16 @@ type indexTmplData struct {
 	Rows       RowsData
 	TotalRows  int
 	FieldNames []string
+}
+
+type integrationsTmplData struct {
+	Integrations []integrationView
+}
+
+type integrationView struct {
+	ID   uuid.UUID
+	Name string
+	URL  string
 }
 
 // RowsData is for the template rows.html.tmpl
@@ -193,9 +205,114 @@ func Router() *mux.Router {
 		}
 	})
 
+
+	// Mail client integrations
+	protected.Methods("GET").Path("/api/dav").HandlerFunc(handleListIntegrations)
+	r.Methods("GET").Path("/api/dav/{id}").HandlerFunc(handleIntegrationExists)
+	protected.Methods("POST").Path("/api/dav").HandlerFunc(handleCreateIntegration)
+	protected.Methods("PATCH").Path("/api/dav/{id}").HandlerFunc(handleUpdateIntegrationName)
+	protected.Methods("DELETE").Path("/api/dav/{id}").HandlerFunc(handleDeleteIntegration)
+
+
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.FS(static.FS))))
 
 	return r
+}
+
+func integrationURL(r *http.Request, id uuid.UUID) string {
+	scheme := "https"
+	if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
+		scheme = "http"
+	}
+	return fmt.Sprintf("%s://%s/api/dav/%s", scheme, r.Host, id)
+}
+
+func renderIntegrations(w http.ResponseWriter, r *http.Request, sub string) {
+	rows, err := database.Client.Queries.ListTokensForUser(r.Context(), sub)
+	if err != nil {
+		log.Printf("list integrations %s: %v", sub, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	views := make([]integrationView, len(rows))
+	for i, row := range rows {
+		views[i] = integrationView{ID: row.ID, Name: row.Name, URL: integrationURL(r, row.ID)}
+	}
+	if err := tmpl.ExecuteTemplate(w, "integrations.html.tmpl", integrationsTmplData{Integrations: views}); err != nil {
+		log.Printf("rendering integrations: %v", err)
+	}
+}
+
+func handleListIntegrations(w http.ResponseWriter, r *http.Request) {
+	renderIntegrations(w, r, auth.CurrentUserSub(r))
+}
+
+func handleCreateIntegration(w http.ResponseWriter, r *http.Request) {
+	sub := auth.CurrentUserSub(r)
+	if _, err := database.Client.Queries.CreateTokenForUser(r.Context(), sub); err != nil {
+		log.Printf("create integration %s: %v", sub, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	renderIntegrations(w, r, sub)
+}
+
+func handleUpdateIntegrationName(w http.ResponseWriter, r *http.Request) {
+	sub := auth.CurrentUserSub(r)
+	id, err := uuid.Parse(mux.Vars(r)["id"])
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(r.PostFormValue("name"))
+	if _, err := database.Client.Queries.UpdateTokenName(r.Context(), database.UpdateTokenNameParams{
+		ID:      id,
+		UserSub: sub,
+		Name:    name,
+	}); err != nil {
+		log.Printf("update integration name %s/%s: %v", sub, id, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func handleDeleteIntegration(w http.ResponseWriter, r *http.Request) {
+	sub := auth.CurrentUserSub(r)
+	id, err := uuid.Parse(mux.Vars(r)["id"])
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	if _, err := database.Client.Queries.DeleteTokenForUser(r.Context(), database.DeleteTokenForUserParams{
+		ID:      id,
+		UserSub: sub,
+	}); err != nil {
+		log.Printf("delete integration %s/%s: %v", sub, id, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	renderIntegrations(w, r, sub)
+}
+
+func handleIntegrationExists(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(mux.Vars(r)["id"])
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	exists, err := database.Client.Queries.TokenExists(r.Context(), id)
+	if err != nil {
+		log.Printf("token exists %s: %v", id, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+	w.Write([]byte("Valid"))
+	// w.WriteHeader(http.StatusOK)
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {

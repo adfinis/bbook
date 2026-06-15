@@ -9,6 +9,9 @@ import (
 	"context"
 	"encoding/json"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 const allContacts = `-- name: AllContacts :many
@@ -53,12 +56,163 @@ func (q *Queries) AllContacts(ctx context.Context) ([]Contact, error) {
 	return items, nil
 }
 
+const createTokenForUser = `-- name: CreateTokenForUser :one
+INSERT INTO tokens (user_sub) VALUES ($1) RETURNING id, created_at
+`
+
+type CreateTokenForUserRow struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+}
+
+func (q *Queries) CreateTokenForUser(ctx context.Context, userSub string) (CreateTokenForUserRow, error) {
+	row := q.db.QueryRowContext(ctx, createTokenForUser, userSub)
+	var i CreateTokenForUserRow
+	err := row.Scan(&i.ID, &i.CreatedAt)
+	return i, err
+}
+
 const deleteContactsSyncedBefore = `-- name: DeleteContactsSyncedBefore :execrows
 DELETE FROM contacts WHERE synced_at < $1
 `
 
 func (q *Queries) DeleteContactsSyncedBefore(ctx context.Context, syncedAt time.Time) (int64, error) {
 	result, err := q.db.ExecContext(ctx, deleteContactsSyncedBefore, syncedAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteOfflineTokensForUserSubs = `-- name: DeleteOfflineTokensForUserSubs :execrows
+DELETE FROM user_offline_tokens WHERE user_sub = ANY($1::text[])
+`
+
+func (q *Queries) DeleteOfflineTokensForUserSubs(ctx context.Context, dollar_1 []string) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteOfflineTokensForUserSubs, pq.Array(dollar_1))
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteTokenForUser = `-- name: DeleteTokenForUser :execrows
+DELETE FROM tokens WHERE id = $1 AND user_sub = $2
+`
+
+type DeleteTokenForUserParams struct {
+	ID      uuid.UUID
+	UserSub string
+}
+
+func (q *Queries) DeleteTokenForUser(ctx context.Context, arg DeleteTokenForUserParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteTokenForUser, arg.ID, arg.UserSub)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteTokensForUserSubs = `-- name: DeleteTokensForUserSubs :execrows
+DELETE FROM tokens WHERE user_sub = ANY($1::text[])
+`
+
+func (q *Queries) DeleteTokensForUserSubs(ctx context.Context, dollar_1 []string) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteTokensForUserSubs, pq.Array(dollar_1))
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const listOfflineTokens = `-- name: ListOfflineTokens :many
+SELECT user_sub, offline_token FROM user_offline_tokens
+`
+
+type ListOfflineTokensRow struct {
+	UserSub      string
+	OfflineToken []byte
+}
+
+func (q *Queries) ListOfflineTokens(ctx context.Context) ([]ListOfflineTokensRow, error) {
+	rows, err := q.db.QueryContext(ctx, listOfflineTokens)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListOfflineTokensRow
+	for rows.Next() {
+		var i ListOfflineTokensRow
+		if err := rows.Scan(&i.UserSub, &i.OfflineToken); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTokensForUser = `-- name: ListTokensForUser :many
+SELECT id, name, created_at FROM tokens WHERE user_sub = $1 ORDER BY created_at DESC
+`
+
+type ListTokensForUserRow struct {
+	ID        uuid.UUID
+	Name      string
+	CreatedAt time.Time
+}
+
+func (q *Queries) ListTokensForUser(ctx context.Context, userSub string) ([]ListTokensForUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, listTokensForUser, userSub)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTokensForUserRow
+	for rows.Next() {
+		var i ListTokensForUserRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const tokenExists = `-- name: TokenExists :one
+SELECT EXISTS(SELECT 1 FROM tokens WHERE id = $1)
+`
+
+func (q *Queries) TokenExists(ctx context.Context, id uuid.UUID) (bool, error) {
+	row := q.db.QueryRowContext(ctx, tokenExists, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const updateTokenName = `-- name: UpdateTokenName :execrows
+UPDATE tokens SET name = $3 WHERE id = $1 AND user_sub = $2
+`
+
+type UpdateTokenNameParams struct {
+	ID      uuid.UUID
+	UserSub string
+	Name    string
+}
+
+func (q *Queries) UpdateTokenName(ctx context.Context, arg UpdateTokenNameParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateTokenName, arg.ID, arg.UserSub, arg.Name)
 	if err != nil {
 		return 0, err
 	}
@@ -115,5 +269,23 @@ func (q *Queries) UpsertContact(ctx context.Context, arg UpsertContactParams) er
 		arg.Raw,
 		arg.SyncedAt,
 	)
+	return err
+}
+
+const upsertOfflineToken = `-- name: UpsertOfflineToken :exec
+INSERT INTO user_offline_tokens (user_sub, offline_token, updated_at)
+VALUES ($1, $2, now())
+ON CONFLICT (user_sub) DO UPDATE SET
+    offline_token = EXCLUDED.offline_token,
+    updated_at    = EXCLUDED.updated_at
+`
+
+type UpsertOfflineTokenParams struct {
+	UserSub      string
+	OfflineToken []byte
+}
+
+func (q *Queries) UpsertOfflineToken(ctx context.Context, arg UpsertOfflineTokenParams) error {
+	_, err := q.db.ExecContext(ctx, upsertOfflineToken, arg.UserSub, arg.OfflineToken)
 	return err
 }

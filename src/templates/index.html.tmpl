@@ -437,6 +437,59 @@
                 <span class="text-xs text-neutral-400"
                     >{{ .TotalRows }} contacts</span
                 >
+            </div>
+
+            <div class="flex gap-4 items-center ml-auto">
+                <!-- Mail client integrations -->
+                <div class="group relative inline-flex items-center">
+                    <button
+                        type="button"
+                        aria-label="Mail client integrations"
+                        class="btn-header hover:text-white"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <rect x="2" y="4" width="20" height="16" rx="2" />
+                            <path d="m22 7-10 6L2 7" />
+                        </svg>
+                    </button>
+                    <div
+                        class="hidden group-hover:block group-focus-within:block absolute right-0 top-full pt-2 w-96 z-50"
+                    >
+                        <div
+                            class="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 text-xs shadow-lg rounded border border-neutral-200 dark:border-neutral-700 p-3"
+                        >
+                            <div
+                                class="font-medium text-sm mb-2 text-brand-stone dark:text-neutral-100"
+                            >
+                                Mail client integrations
+                            </div>
+                            <div
+                                class="text-neutral-600 dark:text-neutral-400 mb-2"
+                            >
+                                Paste one of these URLs into your
+                                CardDAV-capable mail client to sync customer
+                                contacts.
+                            </div>
+                            <div
+                                hx-get="/api/dav"
+                                hx-trigger="load"
+                                hx-swap="outerHTML"
+                            >
+                                Loading...
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Theme toggle-->
                 <button

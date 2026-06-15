@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"git.adfinis.com/albertc/bbook/bbook-backend/config"
+	"git.adfinis.com/albertc/bbook/bbook-backend/database"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 )
@@ -33,10 +34,8 @@ var (
 )
 
 type sessionClaims struct {
-	Sub   string `json:"sub"`
-	Email string `json:"email"`
-	Name  string `json:"name"`
-	Exp   int64  `json:"exp"`
+	Sub string `json:"sub"`
+	Exp int64  `json:"exp"`
 }
 
 type flowClaims struct {
@@ -53,6 +52,10 @@ func Init(ctx context.Context) error {
 	}
 	secret = []byte(config.AppConfig.SessionSecret)
 
+	if err := initCrypto(); err != nil {
+		return fmt.Errorf("initializing auth: %w", err)
+	}
+
 	issuerCtx := oidc.InsecureIssuerURLContext(ctx, config.AppConfig.OIDCIssuerURL)
 	provider, err := oidc.NewProvider(issuerCtx, config.AppConfig.OIDCDiscoveryURL)
 	if err != nil {
@@ -64,7 +67,7 @@ func Init(ctx context.Context) error {
 		ClientSecret: config.AppConfig.OIDCClientSecret,
 		Endpoint:     provider.Endpoint(),
 		RedirectURL:  config.AppConfig.OIDCRedirectURL,
-		Scopes:       []string{oidc.ScopeOpenID, "email", "profile"},
+		Scopes:       []string{oidc.ScopeOpenID, "email", "profile", "offline_access"},
 	}
 	return nil
 }
@@ -152,20 +155,19 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var claims struct {
-		Sub   string `json:"sub"`
-		Email string `json:"email"`
-		Name  string `json:"name"`
+	sub := idToken.Subject
+
+	// Persist the offline refresh so the cleanup goroutine can later check if the user is still allowed.
+	if token.RefreshToken != "" && sub != "" {
+		if err := saveOfflineToken(r.Context(), sub, token.RefreshToken); err != nil {
+			http.Error(w, "store offline token: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
-	if err := idToken.Claims(&claims); err != nil {
-		http.Error(w, "decode claims: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+
 	session := sessionClaims{
-		Sub:   claims.Sub,
-		Email: claims.Email,
-		Name:  claims.Name,
-		Exp:   time.Now().Add(sessionTTL).Unix(),
+		Sub: sub,
+		Exp: time.Now().Add(sessionTTL).Unix(),
 	}
 	if err := setSignedCookie(w, sessionCookieName, session, sessionTTL); err != nil {
 		http.Error(w, "set session: "+err.Error(), http.StatusInternalServerError)
@@ -175,7 +177,18 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, flow.ReturnTo, http.StatusFound)
 }
 
-// LogoutHandler clears the session cookie.
+func saveOfflineToken(ctx context.Context, sub, refreshToken string) error {
+	ct, err := encrypt([]byte(refreshToken))
+	if err != nil {
+		return err
+	}
+	return database.Client.Queries.UpsertOfflineToken(ctx, database.UpsertOfflineTokenParams{
+		UserSub:      sub,
+		OfflineToken: ct,
+	})
+}
+
+// Clears the session cookie.
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	clearCookie(w, sessionCookieName)
 	http.Redirect(w, r, "/", http.StatusFound)
@@ -190,6 +203,15 @@ func currentSession(r *http.Request) (sessionClaims, bool) {
 		return s, false
 	}
 	return s, true
+}
+
+// CurrentUserSub returns the logged-in user identifier for the current request
+func CurrentUserSub(r *http.Request) string {
+	s, ok := currentSession(r)
+	if !ok {
+		return ""
+	}
+	return s.Sub
 }
 
 func setSignedCookie(w http.ResponseWriter, name string, v any, ttl time.Duration) error {

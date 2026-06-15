@@ -1,0 +1,73 @@
+{{- /* Renders the body of the mail-client-integrations dropdown */ -}}
+<div id="integrations-list" class="flex flex-col gap-1">
+    {{ if .Integrations }} {{ range .Integrations }}
+    <div
+        class="flex items-center gap-1.5 border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1"
+    >
+        <input
+            type="text"
+            name="name"
+            value="{{ .Name }}"
+            placeholder="Label"
+            aria-label="Integration label"
+            hx-patch="/api/dav/{{ .ID }}"
+            hx-trigger="change"
+            hx-swap="none"
+            class="w-28 bg-transparent border-b border-transparent focus:border-brand-sapphire outline-none text-brand-stone dark:text-neutral-200 placeholder-neutral-400"
+        />
+        <code
+            class="flex-1 truncate font-mono text-[11px] text-neutral-600 dark:text-neutral-400"
+            title="{{ .URL }}"
+            >{{ .URL }}</code
+        >
+        <button
+            type="button"
+            aria-label="Copy URL"
+            data-url="{{ .URL }}"
+            hx-on:click="navigator.clipboard.writeText(this.dataset.url)"
+            class="text-neutral-400 hover:text-brand-sapphire cursor-pointer"
+        >
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+            >
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path
+                    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                />
+            </svg>
+        </button>
+        <button
+            type="button"
+            aria-label="Remove integration"
+            hx-delete="/api/dav/{{ .ID }}"
+            hx-target="#integrations-list"
+            hx-swap="outerHTML"
+            hx-confirm="Remove this mail client integration?"
+            class="text-neutral-400 hover:text-red-600 cursor-pointer leading-none"
+        >
+            &times;
+        </button>
+    </div>
+    {{ end }} {{ else }}
+    <div class="text-neutral-500 dark:text-neutral-400 italic">
+        No mail client integrations yet.
+    </div>
+    {{ end }}
+    <button
+        type="button"
+        hx-post="/api/dav"
+        hx-target="#integrations-list"
+        hx-swap="outerHTML"
+        class="mt-1 text-left text-brand-sapphire hover:underline cursor-pointer"
+    >
+        + Add a mail client integration
+    </button>
+</div>
