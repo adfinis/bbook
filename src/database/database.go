@@ -21,9 +21,9 @@ var Client database = database{}
 
 func Init() error {
 	dsn := fmt.Sprintf(
-		"postgres://%s:%s@%s/%s?sslmode=disable",
+		"postgres://%s:%s@%s/%s%s",
 		config.AppConfig.PostgresUser, config.AppConfig.PostgresPassword,
-		config.AppConfig.PostgresHost, config.AppConfig.PostgresDB,
+		config.AppConfig.PostgresHost, config.AppConfig.PostgresDB, config.AppConfig.ConnectionStringParams,
 	)
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
