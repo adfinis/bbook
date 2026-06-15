@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"git.adfinis.com/albertc/bbook/bbook-backend/auth"
 	"git.adfinis.com/albertc/bbook/bbook-backend/database"
 	"git.adfinis.com/albertc/bbook/bbook-backend/server"
 	"git.adfinis.com/albertc/bbook/bbook-backend/zoho"
@@ -21,6 +22,10 @@ func main() {
 
 	if err := zoho.Init(); err != nil {
 		log.Fatalf("zoho: %v", err)
+	}
+
+	if err := auth.Init(context.Background()); err != nil {
+		log.Fatalf("auth: %v", err)
 	}
 
 	// Test

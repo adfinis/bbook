@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"git.adfinis.com/albertc/bbook/bbook-backend/auth"
 	"git.adfinis.com/albertc/bbook/bbook-backend/database"
 	"git.adfinis.com/albertc/bbook/bbook-backend/server/search"
 	"git.adfinis.com/albertc/bbook/bbook-backend/static"
@@ -83,7 +84,16 @@ func Router() *mux.Router {
 		w.Write([]byte("pong!"))
 	})
 
-	r.Methods("GET").Path("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// OIDC login flow
+	r.Methods("GET").Path("/auth/login").HandlerFunc(auth.LoginHandler)
+	r.Methods("GET").Path("/auth/callback").HandlerFunc(auth.CallbackHandler)
+	r.Methods("GET").Path("/auth/logout").HandlerFunc(auth.LogoutHandler)
+
+	// Protected routes
+	protected := r.NewRoute().Subrouter()
+	protected.Use(auth.Middleware)
+
+	protected.Methods("GET").Path("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query().Get("q")
 
 		contacts, err := search.Search(q)
@@ -112,7 +122,7 @@ func Router() *mux.Router {
 	//
 	// otherwise
 	//   HTML rows for the first page, plus placeholders for subsequent pages
-	r.Methods("GET").Path("/contacts").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	protected.Methods("GET").Path("/contacts").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query().Get("q")
 
 		contacts, err := search.Search(q)

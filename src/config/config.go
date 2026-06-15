@@ -20,6 +20,13 @@ type config struct {
 	ZohoRefreshToken string
 	ZohoBaseURL      string
 	ZohoAccountsURL  string
+
+	OIDCIssuerURL    string
+	OIDCDiscoveryURL string
+	OIDCClientID     string
+	OIDCClientSecret string
+	OIDCRedirectURL  string
+	SessionSecret    string
 }
 
 func parse() config {
@@ -36,6 +43,13 @@ func parse() config {
 	c.ZohoRefreshToken = os.Getenv("ZOHO_REFRESH_TOKEN")
 	c.ZohoBaseURL = os.Getenv("ZOHO_BASE_URL")
 	c.ZohoAccountsURL = os.Getenv("ZOHO_ACCOUNTS_URL")
+
+	c.OIDCIssuerURL = os.Getenv("OIDC_ISSUER_URL")
+	c.OIDCDiscoveryURL = os.Getenv("OIDC_DISCOVERY_URL")
+	c.OIDCClientID = os.Getenv("OIDC_CLIENT_ID")
+	c.OIDCClientSecret = os.Getenv("OIDC_CLIENT_SECRET")
+	c.OIDCRedirectURL = os.Getenv("OIDC_REDIRECT_URL")
+	c.SessionSecret = os.Getenv("SESSION_SECRET")
 
 	return c
 }
