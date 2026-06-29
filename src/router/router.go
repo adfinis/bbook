@@ -300,7 +300,7 @@ func validDavToken(ctx context.Context, candidates ...string) bool {
 		if err != nil {
 			continue
 		}
-		if ok, err := database.Client.Queries.TokenExists(ctx, id); err == nil && ok {
+		if ok, err := database.Client.Queries.TokenValid(ctx, id); err == nil && ok {
 			return true
 		}
 	}

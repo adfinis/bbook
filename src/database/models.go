@@ -5,6 +5,7 @@
 package database
 
 import (
+	"database/sql"
 	"encoding/json"
 	"time"
 
@@ -32,6 +33,7 @@ type Token struct {
 	ID        uuid.UUID
 	UserSub   string
 	Name      string
+	ExpiresAt sql.NullTime
 	CreatedAt time.Time
 }
 

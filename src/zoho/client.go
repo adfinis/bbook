@@ -93,9 +93,11 @@ func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
 		u := fmt.Sprintf("%s/crm/v8/Contacts?fields=%s", config.AppConfig.ZohoBaseURL, contactFields)
 		if pageNum == 1 {
 			u += fmt.Sprintf("&page=%d", pageNum)
-		} else {
+		} else if prevPage.Info.NextPageToken != "" {
 			// We use page_token for retrieving any subsequent page after the first one
 			u += "&page_token=" + url.QueryEscape(prevPage.Info.NextPageToken)
+		} else {
+			return nil, fmt.Errorf("fetching zoho contacts page %d: next_page_token shouldnt be empty", pageNum)
 		}
 		// fmt.Println(u)
 

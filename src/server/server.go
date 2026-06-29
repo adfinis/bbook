@@ -46,6 +46,7 @@ func Start(ctx context.Context) error {
 
 	// Periodic user access/mailclient token cleanup
 	go auth.StartTokenCleanup(ctx)
+	go auth.StartExpiredTokenPurge(ctx)
 
 	// Zoho sync job
 	go func() {

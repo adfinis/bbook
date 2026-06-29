@@ -19,8 +19,8 @@ SELECT * FROM contacts ORDER BY last_name, first_name;
 -- name: DeleteContactsSyncedBefore :execrows
 DELETE FROM contacts WHERE synced_at < $1;
 
--- name: TokenExists :one
-SELECT EXISTS(SELECT 1 FROM tokens WHERE id = $1);
+-- name: TokenValid :one
+SELECT EXISTS(SELECT 1 FROM tokens WHERE id = $1 AND (expires_at IS NULL OR expires_at > now()));
 
 -- name: ListTokensForUser :many
 SELECT id, name, created_at FROM tokens WHERE user_sub = $1 ORDER BY created_at DESC;
@@ -34,8 +34,14 @@ UPDATE tokens SET name = $3 WHERE id = $1 AND user_sub = $2;
 -- name: DeleteTokenForUser :execrows
 DELETE FROM tokens WHERE id = $1 AND user_sub = $2;
 
--- name: DeleteTokensForUserSubs :execrows
-DELETE FROM tokens WHERE user_sub = ANY($1::text[]);
+-- name: ExpireTokensForUserSubs :execrows
+UPDATE tokens SET expires_at = now() WHERE user_sub = ANY($1::text[]);
+
+-- name: RenewTokensForUser :execrows
+UPDATE tokens SET expires_at = NULL WHERE user_sub = $1;
+
+-- name: DeleteLongExpiredTokens :execrows
+DELETE FROM tokens WHERE expires_at < now() - interval '1 year';
 
 -- name: UpsertOfflineToken :exec
 INSERT INTO user_offline_tokens (user_sub, offline_token, updated_at)

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -162,6 +163,13 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		if err := saveOfflineToken(r.Context(), sub, token.RefreshToken); err != nil {
 			http.Error(w, "store offline token: "+err.Error(), http.StatusInternalServerError)
 			return
+		}
+	}
+
+	// Refresh a user's carddav access tokens once he logs in
+	if sub != "" {
+		if _, err := database.Client.Queries.RenewTokensForUser(r.Context(), sub); err != nil {
+			log.Printf("renew tokens for %s: %v", sub, err)
 		}
 	}
 

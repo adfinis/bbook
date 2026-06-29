@@ -84,6 +84,18 @@ func (q *Queries) DeleteContactsSyncedBefore(ctx context.Context, syncedAt time.
 	return result.RowsAffected()
 }
 
+const deleteLongExpiredTokens = `-- name: DeleteLongExpiredTokens :execrows
+DELETE FROM tokens WHERE expires_at < now() - interval '1 year'
+`
+
+func (q *Queries) DeleteLongExpiredTokens(ctx context.Context) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteLongExpiredTokens)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deleteOfflineTokensForUserSubs = `-- name: DeleteOfflineTokensForUserSubs :execrows
 DELETE FROM user_offline_tokens WHERE user_sub = ANY($1::text[])
 `
@@ -113,12 +125,12 @@ func (q *Queries) DeleteTokenForUser(ctx context.Context, arg DeleteTokenForUser
 	return result.RowsAffected()
 }
 
-const deleteTokensForUserSubs = `-- name: DeleteTokensForUserSubs :execrows
-DELETE FROM tokens WHERE user_sub = ANY($1::text[])
+const expireTokensForUserSubs = `-- name: ExpireTokensForUserSubs :execrows
+UPDATE tokens SET expires_at = now() WHERE user_sub = ANY($1::text[])
 `
 
-func (q *Queries) DeleteTokensForUserSubs(ctx context.Context, dollar_1 []string) (int64, error) {
-	result, err := q.db.ExecContext(ctx, deleteTokensForUserSubs, pq.Array(dollar_1))
+func (q *Queries) ExpireTokensForUserSubs(ctx context.Context, dollar_1 []string) (int64, error) {
+	result, err := q.db.ExecContext(ctx, expireTokensForUserSubs, pq.Array(dollar_1))
 	if err != nil {
 		return 0, err
 	}
@@ -190,12 +202,24 @@ func (q *Queries) ListTokensForUser(ctx context.Context, userSub string) ([]List
 	return items, nil
 }
 
-const tokenExists = `-- name: TokenExists :one
-SELECT EXISTS(SELECT 1 FROM tokens WHERE id = $1)
+const renewTokensForUser = `-- name: RenewTokensForUser :execrows
+UPDATE tokens SET expires_at = NULL WHERE user_sub = $1
 `
 
-func (q *Queries) TokenExists(ctx context.Context, id uuid.UUID) (bool, error) {
-	row := q.db.QueryRowContext(ctx, tokenExists, id)
+func (q *Queries) RenewTokensForUser(ctx context.Context, userSub string) (int64, error) {
+	result, err := q.db.ExecContext(ctx, renewTokensForUser, userSub)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const tokenValid = `-- name: TokenValid :one
+SELECT EXISTS(SELECT 1 FROM tokens WHERE id = $1 AND (expires_at IS NULL OR expires_at > now()))
+`
+
+func (q *Queries) TokenValid(ctx context.Context, id uuid.UUID) (bool, error) {
+	row := q.db.QueryRowContext(ctx, tokenValid, id)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
