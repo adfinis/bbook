@@ -51,18 +51,18 @@ func Start(ctx context.Context) error {
 	go func() {
 		ticker := time.NewTicker(5 * time.Minute)
 		defer ticker.Stop()
-	    for {
+		for {
 			log.Printf("zoho sync: start")
-	        // if err := zoho.RunZohoSync(ctx); err != nil {
-	        //     log.Printf("zoho sync job: %v", err)
-	        // }
+			// if err := zoho.RunZohoSync(ctx); err != nil {
+			// 	log.Printf("zoho sync job: %v", err)
+			// }
 			log.Printf("zoho sync: done")
-	        select {
-	        case <-ctx.Done():
-	            return
-	        case <-ticker.C:
-	        }
-	    }
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
+		}
 	}()
 
 	select {

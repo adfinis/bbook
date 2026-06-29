@@ -69,7 +69,6 @@ func RunZohoSync(ctx context.Context) error {
 	return nil
 }
 
-
 // Fetches all contacts from Zoho
 func fetchContacts(ctx context.Context) ([]database.Contact, error) {
 	var all []database.Contact
@@ -132,7 +131,9 @@ func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
 			if err := json.Unmarshal(raw, &rc); err != nil {
 				return nil, fmt.Errorf("fetching zoho contacts page %d: decode contact: %w", pageNum, err)
 			}
-			*res = append(*res, rc)
+			if rc.Status != "Inactive" {
+				*res = append(*res, rc)
+			}
 		}
 		if !page.Info.MoreRecords {
 			break
@@ -234,7 +235,6 @@ func (r rawZohoContact) toContact() database.Contact {
 		Raw:          r.Raw,
 	}
 }
-
 
 // Returns (and refreshes if necessary) the access token
 func token(ctx context.Context) (string, error) {
