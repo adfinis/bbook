@@ -1,5 +1,44 @@
 {{- /* Renders the body of the mail-client-integrations dropdown */ -}}
-<div id="integrations-list" class="flex flex-col gap-1">
+<div id="integrations-list" class="flex flex-col gap-2">
+    <!-- Shared CardDAV server URL + how to authenticate -->
+    <div class="flex flex-col gap-1">
+        <div class="flex items-center gap-1.5">
+            <span class="shrink-0 text-neutral-500 dark:text-neutral-400">URL</span>
+            <code
+                class="flex-1 truncate font-mono text-[11px] text-neutral-600 dark:text-neutral-400"
+                title="{{ .DavURL }}"
+                >{{ .DavURL }}</code
+            >
+            <button
+                type="button"
+                aria-label="Copy server URL"
+                data-copy="{{ .DavURL }}"
+                hx-on:click="navigator.clipboard.writeText(this.dataset.copy)"
+                class="text-neutral-400 hover:text-brand-sapphire cursor-pointer"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path
+                        d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                    />
+                </svg>
+            </button>
+        </div>
+        <div class="text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
+            Sign in with any username and one of the tokens below as the password.
+        </div>
+    </div>
+
     {{ if .Integrations }} {{ range .Integrations }}
     <div
         class="flex items-center gap-1.5 border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1"
@@ -13,18 +52,18 @@
             hx-patch="/api/dav/{{ .ID }}"
             hx-trigger="change"
             hx-swap="none"
-            class="w-28 bg-transparent border-b border-transparent focus:border-brand-sapphire outline-none text-brand-stone dark:text-neutral-200 placeholder-neutral-400"
+            class="w-24 bg-transparent border-b border-transparent focus:border-brand-sapphire outline-none text-brand-stone dark:text-neutral-200 placeholder-neutral-400"
         />
         <code
             class="flex-1 truncate font-mono text-[11px] text-neutral-600 dark:text-neutral-400"
-            title="{{ .URL }}"
-            >{{ .URL }}</code
+            title="{{ .Token }}"
+            >{{ .Token }}</code
         >
         <button
             type="button"
-            aria-label="Copy URL"
-            data-url="{{ .URL }}"
-            hx-on:click="navigator.clipboard.writeText(this.dataset.url)"
+            aria-label="Copy token"
+            data-copy="{{ .Token }}"
+            hx-on:click="navigator.clipboard.writeText(this.dataset.copy)"
             class="text-neutral-400 hover:text-brand-sapphire cursor-pointer"
         >
             <svg

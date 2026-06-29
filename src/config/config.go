@@ -9,10 +9,12 @@ var AppConfig config = parse()
 type config struct {
 	Env string
 
-	PostgresHost     string
-	PostgresUser     string
-	PostgresPassword string
-	PostgresDB       string
+	BaseURL string
+
+	PostgresHost           string
+	PostgresUser           string
+	PostgresPassword       string
+	PostgresDB             string
 	ConnectionStringParams string
 
 	ZohoClientID     string
@@ -32,6 +34,7 @@ type config struct {
 func parse() config {
 	c := config{}
 	c.Env = os.Getenv("ENV")
+	c.BaseURL = baseURL()
 	c.PostgresHost = os.Getenv("POSTGRES_HOST")
 	c.PostgresUser = os.Getenv("POSTGRES_USER")
 	c.PostgresPassword = os.Getenv("POSTGRES_PASSWORD")
@@ -52,4 +55,16 @@ func parse() config {
 	c.SessionSecret = os.Getenv("SESSION_SECRET")
 
 	return c
+}
+
+func baseURL() string {
+	scheme := os.Getenv("BBOOK_SCHEME")
+	host := os.Getenv("BBOOK_HOSTNAME")
+	port := os.Getenv("BBOOK_PORT")
+
+	url := scheme + "://" + host
+	if port != "" && !(scheme == "https" && port == "443") && !(scheme == "http" && port == "80") {
+		url += ":" + port
+	}
+	return url
 }

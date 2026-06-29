@@ -1,0 +1,54 @@
+{
+  "realm": "bbook",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": false,
+  "accessTokenLifespan": 3600,
+  "clients": [
+    {
+      "clientId": "bbook",
+      "name": "bbook backend",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "bbook-dev-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "https://localhost/*",
+        "http://localhost:8081/*"
+      ],
+      "webOrigins": [
+        "https://localhost",
+        "http://localhost:8081"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "https://localhost/*##http://localhost:8081/*"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "dev",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "dev@bbook.localhost",
+      "firstName": "Dev",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["default-roles-bbook"]
+    }
+  ]
+}

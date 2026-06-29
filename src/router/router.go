@@ -1,9 +1,9 @@
 package router
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"git.adfinis.com/albertc/bbook/bbook-backend/auth"
+	"git.adfinis.com/albertc/bbook/bbook-backend/carddav"
+	"git.adfinis.com/albertc/bbook/bbook-backend/config"
 	"git.adfinis.com/albertc/bbook/bbook-backend/database"
 	"git.adfinis.com/albertc/bbook/bbook-backend/server/search"
 	"git.adfinis.com/albertc/bbook/bbook-backend/static"
@@ -32,13 +34,14 @@ type indexTmplData struct {
 }
 
 type integrationsTmplData struct {
+	DavURL       string
 	Integrations []integrationView
 }
 
 type integrationView struct {
-	ID   uuid.UUID
-	Name string
-	URL  string
+	ID    uuid.UUID
+	Name  string
+	Token string
 }
 
 // RowsData is for the template rows.html.tmpl
@@ -60,7 +63,7 @@ func paginateContacts(contacts []database.ContactView, q string) RowsData {
 
 	var spacers []Spacer
 	for page := 1; page*pageSize < len(contacts); page++ {
-		end := min((page + 1) * pageSize, len(contacts))
+		end := min((page+1)*pageSize, len(contacts))
 
 		spacers = append(spacers, Spacer{
 			Query: q,
@@ -82,7 +85,7 @@ func pageSlice(contacts []database.ContactView, page int) []database.ContactView
 	if start > len(contacts) {
 		return nil
 	}
-	end := min(start + pageSize, len(contacts))
+	end := min(start+pageSize, len(contacts))
 
 	return contacts[start:end]
 }
@@ -101,7 +104,7 @@ func Router() *mux.Router {
 	r.Methods("GET").Path("/auth/callback").HandlerFunc(auth.CallbackHandler)
 	r.Methods("GET").Path("/auth/logout").HandlerFunc(auth.LogoutHandler)
 
-	// Protected routes
+	// Protected routes (OIDC login required)
 	protected := r.NewRoute().Subrouter()
 	protected.Use(auth.Middleware)
 
@@ -182,7 +185,7 @@ func Router() *mux.Router {
 			w.Header().Set("Content-Type", "text/vcard; charset=utf-8")
 			w.Header().Set("Content-Disposition", `attachment; filename="contacts.vcf"`)
 			for _, c := range contacts {
-				w.Write([]byte(c.VCard()))
+				w.Write([]byte(c.VCardString()))
 				w.Write([]byte("\r\n"))
 			}
 			return
@@ -205,26 +208,108 @@ func Router() *mux.Router {
 		}
 	})
 
-
 	// Mail client integrations
-	protected.Methods("GET").Path("/api/dav").HandlerFunc(handleListIntegrations)
-	r.Methods("GET").Path("/api/dav/{id}").HandlerFunc(handleIntegrationExists)
-	protected.Methods("POST").Path("/api/dav").HandlerFunc(handleCreateIntegration)
-	protected.Methods("PATCH").Path("/api/dav/{id}").HandlerFunc(handleUpdateIntegrationName)
-	protected.Methods("DELETE").Path("/api/dav/{id}").HandlerFunc(handleDeleteIntegration)
 
+	// Render list of available CardDav integrations
+	protected.Methods("GET").Path("/api/dav").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		renderIntegrations(w, r, auth.CurrentUserSub(r))
+	})
+
+	// Create a new CardDav token
+	protected.Methods("POST").Path("/api/dav").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sub := auth.CurrentUserSub(r)
+		if _, err := database.Client.Queries.CreateTokenForUser(r.Context(), sub); err != nil {
+			log.Printf("create integration %s: %v", sub, err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		renderIntegrations(w, r, sub)
+	})
+
+	// Update a CardDav integration
+	protected.Methods("PATCH").Path("/api/dav/{id}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sub := auth.CurrentUserSub(r)
+		id, err := uuid.Parse(mux.Vars(r)["id"])
+		if err != nil {
+			http.Error(w, "invalid id", http.StatusBadRequest)
+			return
+		}
+		name := strings.TrimSpace(r.PostFormValue("name"))
+		if _, err := database.Client.Queries.UpdateTokenName(r.Context(), database.UpdateTokenNameParams{
+			ID:      id,
+			UserSub: sub,
+			Name:    name,
+		}); err != nil {
+			log.Printf("update integration name %s/%s: %v", sub, id, err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	// Delete a CardDav integration
+	protected.Methods("DELETE").Path("/api/dav/{id}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sub := auth.CurrentUserSub(r)
+		id, err := uuid.Parse(mux.Vars(r)["id"])
+		if err != nil {
+			http.Error(w, "invalid id", http.StatusBadRequest)
+			return
+		}
+		if _, err := database.Client.Queries.DeleteTokenForUser(r.Context(), database.DeleteTokenForUserParams{
+			ID:      id,
+			UserSub: sub,
+		}); err != nil {
+			log.Printf("delete integration %s/%s: %v", sub, id, err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		renderIntegrations(w, r, sub)
+	})
+
+	// CardDAV for mail clients
+
+	davProtected := r.PathPrefix(carddav.Prefix).Subrouter()
+
+	// Ensure the request is authenticated with a CardDav integration token
+	davProtected.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, pass, ok := r.BasicAuth()
+			if !ok || !validDavToken(r.Context(), pass) {
+				w.Header().Set("WWW-Authenticate", `Basic realm="bbook CardDAV"`)
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	})
+
+	davSrv := carddav.Handler()
+	davProtected.Methods("OPTIONS", "PROPFIND", "REPORT").Handler(davSrv)
+	davProtected.PathPrefix("/principal/").Handler(davSrv)
+
+	r.Handle("/.well-known/carddav", davSrv)
 
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.FS(static.FS))))
 
 	return r
 }
 
-func integrationURL(r *http.Request, id uuid.UUID) string {
-	scheme := "https"
-	if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
-		scheme = "http"
+func validDavToken(ctx context.Context, candidates ...string) bool {
+	for _, cand := range candidates {
+		id, err := uuid.Parse(strings.TrimSpace(cand))
+		if err != nil {
+			continue
+		}
+		if ok, err := database.Client.Queries.TokenExists(ctx, id); err == nil && ok {
+			return true
+		}
 	}
-	return fmt.Sprintf("%s://%s/api/dav/%s", scheme, r.Host, id)
+	return false
+}
+
+// davBaseURL is the CardDAV server URL clients point at, shared across tokens.
+func davBaseURL() string {
+	return strings.TrimSuffix(config.AppConfig.BaseURL, "/") + carddav.Prefix + "/"
 }
 
 func renderIntegrations(w http.ResponseWriter, r *http.Request, sub string) {
@@ -236,83 +321,14 @@ func renderIntegrations(w http.ResponseWriter, r *http.Request, sub string) {
 	}
 	views := make([]integrationView, len(rows))
 	for i, row := range rows {
-		views[i] = integrationView{ID: row.ID, Name: row.Name, URL: integrationURL(r, row.ID)}
+		views[i] = integrationView{ID: row.ID, Name: row.Name, Token: row.ID.String()}
 	}
-	if err := tmpl.ExecuteTemplate(w, "integrations.html.tmpl", integrationsTmplData{Integrations: views}); err != nil {
+	if err := tmpl.ExecuteTemplate(w, "integrations.html.tmpl", integrationsTmplData{
+		DavURL:       davBaseURL(),
+		Integrations: views,
+	}); err != nil {
 		log.Printf("rendering integrations: %v", err)
 	}
-}
-
-func handleListIntegrations(w http.ResponseWriter, r *http.Request) {
-	renderIntegrations(w, r, auth.CurrentUserSub(r))
-}
-
-func handleCreateIntegration(w http.ResponseWriter, r *http.Request) {
-	sub := auth.CurrentUserSub(r)
-	if _, err := database.Client.Queries.CreateTokenForUser(r.Context(), sub); err != nil {
-		log.Printf("create integration %s: %v", sub, err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-	renderIntegrations(w, r, sub)
-}
-
-func handleUpdateIntegrationName(w http.ResponseWriter, r *http.Request) {
-	sub := auth.CurrentUserSub(r)
-	id, err := uuid.Parse(mux.Vars(r)["id"])
-	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
-		return
-	}
-	name := strings.TrimSpace(r.PostFormValue("name"))
-	if _, err := database.Client.Queries.UpdateTokenName(r.Context(), database.UpdateTokenNameParams{
-		ID:      id,
-		UserSub: sub,
-		Name:    name,
-	}); err != nil {
-		log.Printf("update integration name %s/%s: %v", sub, id, err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func handleDeleteIntegration(w http.ResponseWriter, r *http.Request) {
-	sub := auth.CurrentUserSub(r)
-	id, err := uuid.Parse(mux.Vars(r)["id"])
-	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
-		return
-	}
-	if _, err := database.Client.Queries.DeleteTokenForUser(r.Context(), database.DeleteTokenForUserParams{
-		ID:      id,
-		UserSub: sub,
-	}); err != nil {
-		log.Printf("delete integration %s/%s: %v", sub, id, err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-	renderIntegrations(w, r, sub)
-}
-
-func handleIntegrationExists(w http.ResponseWriter, r *http.Request) {
-	id, err := uuid.Parse(mux.Vars(r)["id"])
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-	exists, err := database.Client.Queries.TokenExists(r.Context(), id)
-	if err != nil {
-		log.Printf("token exists %s: %v", id, err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-	if !exists {
-		http.Error(w, "Invalid token", http.StatusUnauthorized)
-		return
-	}
-	w.Write([]byte("Valid"))
-	// w.WriteHeader(http.StatusOK)
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {

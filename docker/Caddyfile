@@ -5,7 +5,6 @@
 
 {$BBOOK_SCHEME}://{$BBOOK_HOSTNAME} {$BBOOK_SCHEME}://www.{$BBOOK_HOSTNAME} {
 	log {
-    output file /var/log/caddy/caddy.log
     level DEBUG
   }
 

@@ -106,6 +106,16 @@ func Search(q string) ([]database.ContactView, error) {
 	return results, nil
 }
 
+// ByID returns the contact with the given ID, if it is currently indexed.
+func ByID(id string) (database.ContactView, bool) {
+	s := current.Load()
+	if s == nil {
+		return database.ContactView{}, false
+	}
+	c, ok := s.byID[id]
+	return c, ok
+}
+
 func contactDoc(c database.ContactView) map[string]any {
 	rv := reflect.ValueOf(c)
 	doc := make(map[string]any, len(indexedFields))

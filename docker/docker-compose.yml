@@ -71,3 +71,24 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+
+  bbook-keycloak:
+    container_name: bbook-keycloak
+    image: quay.io/keycloak/keycloak:26.0
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm"]
+    networks:
+      - bbook-internal
+    ports:
+      - "8090:8080"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: http://localhost:8090
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+    volumes:
+      - ./keycloak/realm-bbook.json:/opt/keycloak/data/import/realm-bbook.json:ro
+      - /etc/timezone:/etc/timezone
+      - /etc/localtime:/etc/localtime

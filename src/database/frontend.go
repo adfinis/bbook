@@ -3,11 +3,13 @@ package database
 import (
 	"reflect"
 	"strings"
+
+	"github.com/emersion/go-vcard"
 )
 
 // ContactView is the projection of a database record to be handed to the client.
 type ContactView struct {
-	ID     string `csv:"ID"`
+	ID         string `csv:"ID"`
 	FirstName  string `csv:"First Name"`
 	LastName   string `csv:"Last Name"`
 	FullName   string
@@ -35,7 +37,7 @@ func (c Contact) ToView() ContactView {
 	}
 
 	return ContactView{
-		ID:     c.ZohoID,
+		ID:         c.ZohoID,
 		FirstName:  c.FirstName,
 		LastName:   c.LastName,
 		FullName:   strings.TrimSpace(c.FirstName + " " + c.LastName),
@@ -50,14 +52,12 @@ func (c Contact) ToView() ContactView {
 	}
 }
 
-
-
-
 // csvFields enumerates the ContactView fields tagged with `csv:"..."
 type csvField struct {
 	Index  int
 	Header string
 }
+
 // List of the columns for the CSV
 var csvFields = func() []csvField {
 	var out []csvField
@@ -89,44 +89,54 @@ func (c ContactView) ToCSV() []string {
 	return row
 }
 
+// VCard returns the contact as a vCard 3.0 card
+func (c ContactView) VCard() vcard.Card {
+	card := vcard.Card{}
+	card.SetValue(vcard.FieldVersion, "3.0")
+	card.SetValue(vcard.FieldUID, "bbook-"+c.ID)
 
-
-// VCard returns the contact as a vCard string.
-func (c ContactView) VCard() string {
-	lines := []string{"BEGIN:VCARD", "VERSION:3.0"}
 	if c.FullName != "" {
-		lines = append(lines, "FN:"+vCardEscape(c.FullName))
+		card.SetValue(vcard.FieldFormattedName, c.FullName)
 	}
 	if c.FirstName != "" || c.LastName != "" {
-		lines = append(lines, "N:"+vCardEscape(c.LastName)+";"+vCardEscape(c.FirstName)+";;;")
+		card.SetName(&vcard.Name{FamilyName: c.LastName, GivenName: c.FirstName})
 	}
 	if c.Org != "" {
-		lines = append(lines, "ORG:"+vCardEscape(c.Org))
+		card.SetValue(vcard.FieldOrganization, c.Org)
 	}
 	if c.Email != "" {
-		lines = append(lines, "EMAIL;TYPE=INTERNET:"+c.Email)
+		card.Add(vcard.FieldEmail, &vcard.Field{
+			Value:  c.Email,
+			Params: vcard.Params{vcard.ParamType: {"internet"}},
+		})
 	}
 	if c.Phone != "" {
-		lines = append(lines, "TEL;TYPE=WORK,VOICE:"+c.Phone)
+		card.Add(vcard.FieldTelephone, &vcard.Field{
+			Value:  c.Phone,
+			Params: vcard.Params{vcard.ParamType: {vcard.TypeWork, vcard.TypeVoice}},
+		})
 	}
 	if c.Mobile != "" {
-		lines = append(lines, "TEL;TYPE=CELL:"+c.Mobile)
+		card.Add(vcard.FieldTelephone, &vcard.Field{
+			Value:  c.Mobile,
+			Params: vcard.Params{vcard.ParamType: {vcard.TypeCell}},
+		})
 	}
 	if c.Street != "" || c.City != "" || c.PostalCode != "" {
-		// ADR fields: po-box;extended;street;locality;region;postal-code;country
-		lines = append(lines, "ADR;TYPE=WORK:;;"+
-			vCardEscape(c.Street)+";"+
-			vCardEscape(c.City)+";;"+
-			vCardEscape(c.PostalCode)+";")
+		card.SetAddress(&vcard.Address{
+			StreetAddress: c.Street,
+			Locality:      c.City,
+			PostalCode:    c.PostalCode,
+		})
 	}
-	lines = append(lines, "END:VCARD")
-	return strings.Join(lines, "\r\n")
+	return card
 }
 
-func vCardEscape(s string) string {
-	s = strings.ReplaceAll(s, "\\", "\\\\")
-	s = strings.ReplaceAll(s, "\n", "\\n")
-	s = strings.ReplaceAll(s, ";", "\\;")
-	s = strings.ReplaceAll(s, ",", "\\,")
-	return s
+// VCardString returns the contact as a vCard 3.0 string.
+func (c ContactView) VCardString() string {
+	var buf strings.Builder
+	if err := vcard.NewEncoder(&buf).Encode(c.VCard()); err != nil {
+		return ""
+	}
+	return buf.String()
 }
