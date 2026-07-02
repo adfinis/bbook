@@ -8,10 +8,10 @@ import (
 	"syscall"
 	"time"
 
-	"git.adfinis.com/albertc/bbook/bbook-backend/auth"
-	"git.adfinis.com/albertc/bbook/bbook-backend/database"
-	"git.adfinis.com/albertc/bbook/bbook-backend/router"
-	"git.adfinis.com/albertc/bbook/bbook-backend/server/search"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/auth"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/database"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/router"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/server/search"
 )
 
 const addr = ":8081"

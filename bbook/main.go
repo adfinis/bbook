@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 
-	"git.adfinis.com/albertc/bbook/bbook-backend/auth"
-	"git.adfinis.com/albertc/bbook/bbook-backend/database"
-	"git.adfinis.com/albertc/bbook/bbook-backend/server"
-	"git.adfinis.com/albertc/bbook/bbook-backend/zoho"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/auth"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/database"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/server"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/zoho"
 	"github.com/urfave/cli/v3"
 )
 

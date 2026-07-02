@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	"git.adfinis.com/albertc/bbook/bbook-backend/config"
-	"git.adfinis.com/albertc/bbook/bbook-backend/database/migrations"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/config"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/database/migrations"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"

@@ -36,7 +36,7 @@ services:
       - bbook-internal
     command: ["air"]
     volumes:
-      - ../src:/app
+      - ../bbook:/app
       - /etc/timezone:/etc/timezone
       - /etc/localtime:/etc/localtime
     env_file:

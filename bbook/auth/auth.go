@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"git.adfinis.com/albertc/bbook/bbook-backend/config"
-	"git.adfinis.com/albertc/bbook/bbook-backend/database"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/config"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/database"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 )

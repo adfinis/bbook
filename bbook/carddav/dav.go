@@ -18,8 +18,8 @@ import (
 	"github.com/emersion/go-vcard"
 	"github.com/emersion/go-webdav"
 
-	"git.adfinis.com/albertc/bbook/bbook-backend/database"
-	"git.adfinis.com/albertc/bbook/bbook-backend/server/search"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/database"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/server/search"
 )
 
 const Prefix = "/api/dav"

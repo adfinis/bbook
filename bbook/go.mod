@@ -1,4 +1,4 @@
-module git.adfinis.com/albertc/bbook/bbook-backend
+module git.adfinis.com/int-infrastructure/bbook/bbook
 
 go 1.26.0
 

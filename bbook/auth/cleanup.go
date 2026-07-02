@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"git.adfinis.com/albertc/bbook/bbook-backend/database"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/database"
 	"golang.org/x/oauth2"
 )
 

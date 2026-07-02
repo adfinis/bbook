@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"git.adfinis.com/albertc/bbook/bbook-backend/database"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/database"
 	"github.com/blevesearch/bleve/v2"
 )
 

@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"git.adfinis.com/albertc/bbook/bbook-backend/config"
-	"git.adfinis.com/albertc/bbook/bbook-backend/database"
-	"git.adfinis.com/albertc/bbook/bbook-backend/server/search"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/config"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/database"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/server/search"
 )
 
 var client zohoHTTPClient = zohoHTTPClient{}
