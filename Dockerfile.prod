@@ -1,0 +1,10 @@
+FROM alpine:3.22
+
+RUN apk add --no-cache ca-certificates
+
+COPY bbook /usr/bin/bbook
+
+EXPOSE 8081
+
+ENTRYPOINT ["/usr/bin/bbook"]
+CMD ["server"]

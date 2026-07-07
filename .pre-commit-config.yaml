@@ -1,0 +1,13 @@
+---
+repos:
+  - repo: local
+    hooks:
+      - id: commitlint-docker
+        name: Commitlint (via Docker)
+        language: docker_image
+        entry: commitlint/commitlint:latest --extends @commitlint/config-conventional --edit
+        stages: [commit-msg]
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks-docker

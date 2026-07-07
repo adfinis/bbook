@@ -1,0 +1,81 @@
+variables:
+  RUNNER_GENERATE_ARTIFACTS_METADATA: "true"
+  SLSA_PROVENANCE_SCHEMA_VERSION: "v1"
+  GIT_DEPTH: "0"
+  GITLAB_TOKEN: $CI_JOB_TOKEN
+
+stages:
+  - history
+  - lint
+  - release
+
+include:
+  - component: $CI_SERVER_FQDN/components/gitleaks/gitleaks@0.3
+    inputs:
+      stage: history
+      git_depth: 0
+
+  - component: $CI_SERVER_FQDN/components/linting/commitlint/commitlint@0.1
+    inputs:
+      stage: history
+
+  - component: $CI_SERVER_FQDN/components/linting/gosec/gosec@0.1
+    inputs:
+      stage: lint
+      golang_project_root: bbook
+      junit_report_filename: bbook.gosec.xml
+      rules:
+        - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+  - component: $CI_SERVER_FQDN/components/go-semantic-release/release@0.1
+    inputs:
+      stage: release
+      git-depth: 0
+      rules:
+        - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "release"'
+
+# Shared setup for the real and dry-run goreleaser jobs.
+.goreleaser-base:
+  image: golang:1.26
+  services:
+    - docker:27-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_VERIFY: "1"
+    DOCKER_CERT_PATH: "/certs/client"
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends docker.io ca-certificates
+    - curl -sSfL "https://github.com/goreleaser/goreleaser/releases/download/v2.12.0/goreleaser_Linux_x86_64.tar.gz" | tar -xz -C /usr/local/bin goreleaser
+    - curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+# build binary + image + sboms on a new release and pushes them
+goreleaser:
+  extends: .goreleaser-base
+  stage: release
+  needs: ["semrel-release"]
+  script:
+    - git fetch --prune --prune-tags
+    - |
+      if ! git describe --tags --exact-match HEAD >/dev/null 2>&1; then
+        echo "No new release was created earlier. Bye"
+        exit 0
+      fi
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - goreleaser release --clean
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "release"'
+
+
+goreleaser-dryrun:
+  extends: .goreleaser-base
+  stage: release
+  needs: []
+  script:
+    - goreleaser release --snapshot --clean
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 3 days
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "release"'
