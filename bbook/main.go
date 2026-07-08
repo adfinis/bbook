@@ -64,7 +64,7 @@ func main() {
 	// fmt.Println(string(b))
 
 	cmd := &cli.Command{
-		Name:                  "bbook-backend",
+		Name:                  "bbook",
 		Usage:                 "BBook backend",
 		EnableShellCompletion: true,
 		Commands: []*cli.Command{

@@ -26,8 +26,8 @@ services:
     env_file:
       - .env
 
-  bbook-backend:
-    container_name: bbook-backend
+  bbook:
+    container_name: bbook
     build:
       context: ../src
       dockerfile: Dockerfile.dev

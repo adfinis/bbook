@@ -8,15 +8,15 @@ RUN apk add git iputils bash bash-completion zsh fish
 RUN apk add libstdc++
 
 RUN echo "source /etc/bash/bash_completion.sh" >> ~/.bash_profile
-RUN echo "source <(bbook-backend completion bash)" >> ~/.bashrc
+RUN echo "source <(bbook completion bash)" >> ~/.bashrc
 RUN printf "%s\n" \
     "autoload -Uz compinit" \
     "compinit" \
-    "source <(bbook-backend completion zsh)" \
+    "source <(bbook completion zsh)" \
     >> ~/.zshrc
 
 RUN mkdir -p ~/.config/fish
-RUN echo "bbook-backend completion fish 2>/dev/null | source" >> ~/.config/fish/config.fish
+RUN echo "bbook completion fish 2>/dev/null | source" >> ~/.config/fish/config.fish
 
 
 RUN go install github.com/air-verse/air@v1.64.5

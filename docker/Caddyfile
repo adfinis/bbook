@@ -8,5 +8,5 @@
     level DEBUG
   }
 
-  reverse_proxy http://bbook-backend:8081
+  reverse_proxy http://bbook:8081
 }
