@@ -36,9 +36,9 @@ include:
 
 # Shared setup for the real and dry-run goreleaser jobs.
 .goreleaser-base:
-  image: golang:1.26
+  image: golang:1.26@sha256:b900de91b15b2e2953d930ece1d0ecff0a1590ab2006088d20dcf0f56f1e979f
   services:
-    - docker:27-dind
+    - docker:27-dind@sha256:aa3df78ecf320f5fafdce71c659f1629e96e9de0968305fe1de670e0ca9176ce
   variables:
     DOCKER_HOST: tcp://docker:2376
     DOCKER_TLS_CERTDIR: "/certs"
@@ -47,7 +47,7 @@ include:
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends docker.io ca-certificates
     - curl -sSfL "https://github.com/goreleaser/goreleaser/releases/download/v2.12.0/goreleaser_Linux_x86_64.tar.gz" | tar -xz -C /usr/local/bin goreleaser
-    - curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+    - curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin v1.46.0
 
 # build binary + image + sboms on a new release and pushes them
 goreleaser:
