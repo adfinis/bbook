@@ -19,7 +19,7 @@ include:
     inputs:
       stage: history
 
-  - component: $CI_SERVER_FQDN/components/linting/gosec/gosec@0.1
+  - component: $CI_SERVER_FQDN/components/Go/gosec/gosec@0.1
     inputs:
       stage: lint
       golang_project_root: bbook
