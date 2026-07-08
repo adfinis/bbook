@@ -12,6 +12,7 @@ import (
 	"git.adfinis.com/int-infrastructure/bbook/bbook/database"
 	"git.adfinis.com/int-infrastructure/bbook/bbook/router"
 	"git.adfinis.com/int-infrastructure/bbook/bbook/server/search"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/zoho"
 )
 
 const addr = ":8081"
@@ -54,9 +55,9 @@ func Start(ctx context.Context) error {
 		defer ticker.Stop()
 		for {
 			log.Printf("zoho sync: start")
-			// if err := zoho.RunZohoSync(ctx); err != nil {
-			// 	log.Printf("zoho sync job: %v", err)
-			// }
+			if err := zoho.RunZohoSync(ctx); err != nil {
+				log.Printf("zoho sync job: %v", err)
+			}
 			log.Printf("zoho sync: done")
 			select {
 			case <-ctx.Done():
