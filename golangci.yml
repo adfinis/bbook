@@ -1,0 +1,17 @@
+---
+version: "2"
+
+linters:
+  enable:
+    - asasalint
+    - bidichk
+    - bodyclose
+    - dupl
+    - errcheck
+    - errname
+    - exhaustive
+    - gosec
+    - misspell
+    - noctx
+    - rowserrcheck
+    - sqlclosecheck

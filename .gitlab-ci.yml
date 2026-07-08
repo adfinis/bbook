@@ -19,11 +19,10 @@ include:
     inputs:
       stage: history
 
-  - component: $CI_SERVER_FQDN/components/Go/gosec/gosec@0.1
+  - component: $CI_SERVER_FQDN/components/go/golangci-lint/golangci-lint@0.1
     inputs:
       stage: lint
       golang_project_root: bbook
-      junit_report_filename: bbook.gosec.xml
       rules:
         - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
@@ -32,7 +31,7 @@ include:
       stage: release
       git-depth: 0
       rules:
-        - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "release"'
+        - if: '$CI_PIPELINE_SOURCE == "push"'
 
 # Shared setup for the real and dry-run goreleaser jobs.
 .goreleaser-base:
