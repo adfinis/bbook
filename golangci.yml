@@ -15,3 +15,23 @@ linters:
     - noctx
     - rowserrcheck
     - sqlclosecheck
+    - goconst
+    - godot
+    - gomoddirectives
+    - goprintffuncname
+    - nakedret
+    - nilerr
+    - nolintlint
+    - prealloc
+    - tparallel
+    - unconvert
+    - unparam
+    - whitespace
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+
