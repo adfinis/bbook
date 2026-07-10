@@ -109,8 +109,16 @@ func Middleware(next http.Handler) http.Handler {
 // Starts the auth-code flow.
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	returnTo := r.URL.Query().Get("return_to")
-	if returnTo == "" || !strings.HasPrefix(returnTo, "/") {
+	if returnTo == "" {
 		returnTo = "/"
+	}
+	// Only allow same-site paths
+	u, err := url.Parse(returnTo)
+	if err != nil || u.Scheme != "" || u.Host != "" ||
+		!strings.HasPrefix(returnTo, "/") || strings.Contains(returnTo, "\\") {
+		log.Printf("login: rejected return_to %s", strconv.Quote(returnTo))
+		http.Error(w, "invalid return_to", http.StatusBadRequest)
+		return
 	}
 	state, err := randString(24)
 	if err != nil {
