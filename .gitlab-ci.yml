@@ -47,6 +47,8 @@ include:
     - apt-get update && apt-get install -y --no-install-recommends docker.io ca-certificates
     - curl -sSfL "https://github.com/goreleaser/goreleaser/releases/download/v2.12.0/goreleaser_Linux_x86_64.tar.gz" | tar -xz -C /usr/local/bin goreleaser
     - curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin v1.46.0
+    
+    - curl -sSfL https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.0/tailwindcss-linux-x64 -o /usr/local/bin/tailwindcss && chmod +x /usr/local/bin/tailwindcss
 
 # build binary + image + sboms on a new release and pushes them
 goreleaser:

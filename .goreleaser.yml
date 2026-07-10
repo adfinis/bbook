@@ -2,6 +2,10 @@ version: 2
 
 project_name: bbook
 
+before:
+  hooks:
+    - tailwindcss -i bbook/tailwind.input.css -o bbook/static/tailwind.css --minify
+
 builds:
   - id: bbook
     dir: bbook
