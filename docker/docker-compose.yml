@@ -29,7 +29,7 @@ services:
   bbook:
     container_name: bbook
     build:
-      context: ../src
+      context: ../bbook
       dockerfile: Dockerfile.dev
     restart: unless-stopped
     networks:
