@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -73,7 +74,7 @@ func Init(ctx context.Context) error {
 	return nil
 }
 
-// Redirects unauthenticated requests to the login flow
+// Redirects unauthenticated requests to the login flow.
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := currentSession(r); ok {
@@ -91,7 +92,7 @@ func Middleware(next http.Handler) http.Handler {
 	})
 }
 
-// Starts the auth-code flow
+// Starts the auth-code flow.
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	returnTo := r.URL.Query().Get("return_to")
 	if returnTo == "" || !strings.HasPrefix(returnTo, "/") {
@@ -120,7 +121,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, oauthCfg.AuthCodeURL(state, oidc.Nonce(nonce)), http.StatusFound)
 }
 
-// Completes the auth-code flow
+// Completes the auth-code flow.
 func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	var flow flowClaims
 	if err := readSignedCookie(r, flowCookieName, &flow); err != nil {
@@ -169,7 +170,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	// Refresh a user's carddav access tokens once he logs in
 	if sub != "" {
 		if _, err := database.Client.Queries.RenewTokensForUser(r.Context(), sub); err != nil {
-			log.Printf("renew tokens for %s: %v", sub, err)
+			log.Printf("renew tokens for %s: %v", strconv.Quote(sub), err)
 		}
 	}
 
@@ -213,7 +214,7 @@ func currentSession(r *http.Request) (sessionClaims, bool) {
 	return s, true
 }
 
-// CurrentUserSub returns the logged-in user identifier for the current request
+// CurrentUserSub returns the logged-in user identifier for the current request.
 func CurrentUserSub(r *http.Request) string {
 	s, ok := currentSession(r)
 	if !ok {

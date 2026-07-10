@@ -16,10 +16,10 @@ type field struct {
 	Idx    int
 }
 
-// list of all Bleve searchable fields. Auto generated from database.ContactView
+// list of all Bleve searchable fields. Auto generated from database.ContactView.
 var indexedFields = computeIndexedFields(reflect.TypeOf(database.ContactView{}))
 
-// list of the possible field names
+// list of the possible field names.
 var FieldNames = func() []string {
 	names := make([]string, len(indexedFields))
 	for i, f := range indexedFields {
@@ -43,7 +43,7 @@ func computeIndexedFields(t reflect.Type) []field {
 	return out
 }
 
-// Holds Bleve's state
+// Holds Bleve's state.
 type state struct {
 	idx     bleve.Index                     // the bleve full-text index
 	byID    map[string]database.ContactView // resolves a hit's ID back to its ContactView
@@ -52,7 +52,7 @@ type state struct {
 
 var current atomic.Pointer[state]
 
-// Rebuilds the search index given a list of contacts
+// Rebuilds the search index given a list of contacts.
 func Rebuild(contacts []database.Contact) error {
 	idx, err := bleve.NewMemOnly(bleve.NewIndexMapping())
 	if err != nil {

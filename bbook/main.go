@@ -13,12 +13,11 @@ import (
 )
 
 func main() {
-
-	err := database.Init()
+	err := database.Init(context.Background())
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
-	defer database.Client.DB.Close()
+	defer func() { _ = database.Client.DB.Close() }()
 
 	if err := zoho.Init(); err != nil {
 		log.Fatalf("zoho: %v", err)

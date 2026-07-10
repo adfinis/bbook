@@ -63,7 +63,7 @@ func baseURL() string {
 	port := os.Getenv("BBOOK_PORT")
 
 	url := scheme + "://" + host
-	if port != "" && !(scheme == "https" && port == "443") && !(scheme == "http" && port == "80") {
+	if port != "" && (scheme != "https" || port != "443") && (scheme != "http" || port != "80") {
 		url += ":" + port
 	}
 	return url

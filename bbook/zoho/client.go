@@ -42,7 +42,7 @@ func RunZohoSync(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback() // no-op after a successful Commit
+	defer func() { _ = tx.Rollback() }() // no-op after a successful Commit
 
 	q := database.Client.Queries.WithTx(tx)
 	for _, c := range contacts {
@@ -69,7 +69,7 @@ func RunZohoSync(ctx context.Context) error {
 	return nil
 }
 
-// Fetches all contacts from Zoho
+// Fetches all contacts from Zoho.
 func fetchContacts(ctx context.Context) ([]database.Contact, error) {
 	var all []database.Contact
 
@@ -110,7 +110,7 @@ func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
 		if err != nil {
 			return nil, fmt.Errorf("fetching zoho contacts page %d: %w", pageNum, err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// No more content
 		if resp.StatusCode == http.StatusNoContent {
@@ -238,7 +238,7 @@ func (r rawZohoContact) toContact() database.Contact {
 	}
 }
 
-// Returns (and refreshes if necessary) the access token
+// Returns (and refreshes if necessary) the access token.
 func token(ctx context.Context) (string, error) {
 	if client.accessToken != "" && time.Now().Before(client.expiry) {
 		return client.accessToken, nil
@@ -263,7 +263,7 @@ func token(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("refreshing zoho access token: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Refresh successful
 	if resp.StatusCode != http.StatusOK {

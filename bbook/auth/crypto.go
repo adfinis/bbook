@@ -11,7 +11,6 @@ import (
 
 var aead cipher.AEAD
 
-
 func initCrypto() error {
 	key := sha256.Sum256(secret)
 	block, err := aes.NewCipher(key[:])
@@ -26,7 +25,7 @@ func initCrypto() error {
 	return nil
 }
 
-// Encrypt using SESSION SECRET
+// Encrypt using SESSION SECRET.
 func encrypt(plaintext []byte) ([]byte, error) {
 	nonce := make([]byte, aead.NonceSize())
 	if _, err := rand.Read(nonce); err != nil {
@@ -35,7 +34,7 @@ func encrypt(plaintext []byte) ([]byte, error) {
 	return aead.Seal(nonce, nonce, plaintext, nil), nil
 }
 
-// Decrypt using SESSION SECRET
+// Decrypt using SESSION SECRET.
 func decrypt(ciphertext []byte) ([]byte, error) {
 	if len(ciphertext) < aead.NonceSize() {
 		return nil, errors.New("decrypting: ciphertext too short")

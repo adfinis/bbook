@@ -23,7 +23,7 @@ import (
 
 var tmpl = template.Must(template.ParseFS(templates.FS, "*.tmpl"))
 
-// Contacts are returned one page at a time
+// Contacts are returned one page at a time.
 const pageSize = 500
 
 type indexTmplData struct {
@@ -44,13 +44,13 @@ type integrationView struct {
 	Token string
 }
 
-// RowsData is for the template rows.html.tmpl
+// RowsData is for the template rows.html.tmpl.
 type RowsData struct {
 	Contacts []database.ContactView
 	Spacers  []Spacer
 }
 
-// Spacer is a placeholder for a page of contacts that hasn't been fetched yet. Count is the number of rows the eventual page will contain (used to compute its height)
+// Spacer is a placeholder for a page of contacts that hasn't been fetched yet. Count is the number of rows the eventual page will contain (used to compute its height).
 type Spacer struct {
 	Query string
 	Page  int
@@ -96,7 +96,7 @@ func Router() *mux.Router {
 	r.Use(loggingMiddleware)
 
 	r.Methods("GET").Path("/api/ping").HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Write([]byte("pong!"))
+		_, _ = w.Write([]byte("pong!"))
 	})
 
 	// OIDC login flow
@@ -113,7 +113,7 @@ func Router() *mux.Router {
 
 		contacts, err := search.Search(q)
 		if err != nil {
-			log.Printf("search query %v: %v", q, err)
+			log.Printf("search query %s: %v", strconv.Quote(q), err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -142,7 +142,7 @@ func Router() *mux.Router {
 
 		contacts, err := search.Search(q)
 		if err != nil {
-			log.Printf("search query %v: %v", q, err)
+			log.Printf("search query %s: %v", strconv.Quote(q), err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -172,10 +172,13 @@ func Router() *mux.Router {
 			w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 			w.Header().Set("Content-Disposition", `attachment; filename="contacts.csv"`)
 			cw := csv.NewWriter(w)
-			defer cw.Flush()
-			cw.Write(database.ContactCSVHeader())
+			_ = cw.Write(database.ContactCSVHeader())
 			for _, c := range contacts {
-				cw.Write(c.ToCSV())
+				_ = cw.Write(c.ToCSV())
+			}
+			cw.Flush()
+			if err := cw.Error(); err != nil {
+				log.Printf("writing contacts csv: %v", err)
 			}
 			return
 		}
@@ -185,8 +188,8 @@ func Router() *mux.Router {
 			w.Header().Set("Content-Type", "text/vcard; charset=utf-8")
 			w.Header().Set("Content-Disposition", `attachment; filename="contacts.vcf"`)
 			for _, c := range contacts {
-				w.Write([]byte(c.VCardString()))
-				w.Write([]byte("\r\n"))
+				_, _ = w.Write([]byte(c.VCardString())) // #nosec G705 served as text/vcard attachment, not HTML
+				_, _ = w.Write([]byte("\r\n"))
 			}
 			return
 		}
@@ -219,7 +222,7 @@ func Router() *mux.Router {
 	protected.Methods("POST").Path("/api/dav").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sub := auth.CurrentUserSub(r)
 		if _, err := database.Client.Queries.CreateTokenForUser(r.Context(), sub); err != nil {
-			log.Printf("create integration %s: %v", sub, err)
+			log.Printf("create integration %s: %v", strconv.Quote(sub), err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -240,7 +243,7 @@ func Router() *mux.Router {
 			UserSub: sub,
 			Name:    name,
 		}); err != nil {
-			log.Printf("update integration name %s/%s: %v", sub, id, err)
+			log.Printf("update integration name %s/%s: %v", strconv.Quote(sub), strconv.Quote(id.String()), err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -259,7 +262,7 @@ func Router() *mux.Router {
 			ID:      id,
 			UserSub: sub,
 		}); err != nil {
-			log.Printf("delete integration %s/%s: %v", sub, id, err)
+			log.Printf("delete integration %s/%s: %v", strconv.Quote(sub), strconv.Quote(id.String()), err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -315,7 +318,7 @@ func davBaseURL() string {
 func renderIntegrations(w http.ResponseWriter, r *http.Request, sub string) {
 	rows, err := database.Client.Queries.ListTokensForUser(r.Context(), sub)
 	if err != nil {
-		log.Printf("list integrations %s: %v", sub, err)
+		log.Printf("list integrations %s: %v", strconv.Quote(sub), err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -333,7 +336,7 @@ func renderIntegrations(w http.ResponseWriter, r *http.Request, sub string) {
 
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
+		log.Printf("%s %s %s", strconv.Quote(r.RemoteAddr), strconv.Quote(r.Method), strconv.Quote(r.URL.String()))
 		next.ServeHTTP(w, r)
 	})
 }

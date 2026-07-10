@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -19,7 +20,7 @@ type database struct {
 
 var Client database = database{}
 
-func Init() error {
+func Init(ctx context.Context) error {
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s/%s%s",
 		config.AppConfig.PostgresUser, config.AppConfig.PostgresPassword,
@@ -29,13 +30,13 @@ func Init() error {
 	if err != nil {
 		return fmt.Errorf("connecting to postgres: open: %w", err)
 	}
-	if err := db.Ping(); err != nil {
-		db.Close()
+	if err := db.PingContext(ctx); err != nil {
+		_ = db.Close()
 		return fmt.Errorf("connecting to postgres: ping: %w", err)
 	}
 
 	if err := runMigrations(db); err != nil {
-		db.Close()
+		_ = db.Close()
 		return err
 	}
 

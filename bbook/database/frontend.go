@@ -23,7 +23,7 @@ type ContactView struct {
 	Address    string
 }
 
-// Given a Contact in the database, give its ContactView projection
+// Given a Contact in the database, give its ContactView projection.
 func (c Contact) ToView() ContactView {
 	address := c.Street
 	if address != "" && (c.City != "" || c.PostalCode != "") {
@@ -52,13 +52,13 @@ func (c Contact) ToView() ContactView {
 	}
 }
 
-// csvFields enumerates the ContactView fields tagged with `csv:"..."
+// csvFields enumerates the ContactView fields tagged with `csv:"..."`.
 type csvField struct {
 	Index  int
 	Header string
 }
 
-// List of the columns for the CSV
+// List of the columns for the CSV.
 var csvFields = func() []csvField {
 	var out []csvField
 	t := reflect.TypeOf(ContactView{})
@@ -79,7 +79,7 @@ func ContactCSVHeader() []string {
 	return headers
 }
 
-// ToCSV returns the contact as a single CSV row
+// ToCSV returns the contact as a single CSV row.
 func (c ContactView) ToCSV() []string {
 	v := reflect.ValueOf(c)
 	row := make([]string, len(csvFields))
@@ -89,7 +89,7 @@ func (c ContactView) ToCSV() []string {
 	return row
 }
 
-// VCard returns the contact as a vCard 3.0 card
+// VCard returns the contact as a vCard 3.0 card.
 func (c ContactView) VCard() vcard.Card {
 	card := vcard.Card{}
 	card.SetValue(vcard.FieldVersion, "3.0")

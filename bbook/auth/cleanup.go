@@ -12,7 +12,7 @@ import (
 
 const cleanupInterval = 5 * time.Minute
 
-// Runs a periodic sweep that revokes access tokens for users Keycloak no longer allows
+// Runs a periodic sweep that revokes access tokens for users Keycloak no longer allows.
 func StartTokenCleanup(ctx context.Context) {
 	ticker := time.NewTicker(cleanupInterval)
 	defer ticker.Stop()

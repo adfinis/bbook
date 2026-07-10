@@ -18,7 +18,6 @@ import (
 const addr = ":8081"
 
 func Start(ctx context.Context) error {
-
 	// Build the search index from the DB on startup
 	if contacts, err := database.Client.Queries.AllContacts(ctx); err != nil {
 		log.Printf("initial search index: load contacts: %v", err)

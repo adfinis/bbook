@@ -5,7 +5,7 @@ package carddav
 import (
 	"bytes"
 	"context"
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -30,9 +30,9 @@ const (
 	addressBookPath = Prefix + "/principal/addressbooks/contacts/"
 )
 
-var webDavReadOnlyError = webdav.NewHTTPError(http.StatusForbidden, errors.New("bbook address book is read-only"))
+var errWebDavReadOnly = webdav.NewHTTPError(http.StatusForbidden, errors.New("bbook address book is read-only"))
 
-// CardDav HTTP handler
+// CardDav HTTP handler.
 func Handler() http.Handler {
 	return &gocarddav.Handler{Backend: backend{}, Prefix: Prefix}
 }
@@ -89,7 +89,7 @@ func (backend) ListAddressObjects(_ context.Context, p string, _ *gocarddav.Addr
 	return objs, nil
 }
 
-// Note: we ignore the query and just return everything, while still honoring the limit in the results
+// Note: we ignore the query and just return everything, while still honoring the limit in the results.
 func (b backend) QueryAddressObjects(ctx context.Context, p string, query *gocarddav.AddressBookQuery) ([]gocarddav.AddressObject, error) {
 	objs, err := b.ListAddressObjects(ctx, p, nil)
 	if err != nil {
@@ -114,19 +114,19 @@ func (backend) GetAddressObject(_ context.Context, p string, _ *gocarddav.Addres
 }
 
 func (backend) CreateAddressBook(context.Context, *gocarddav.AddressBook) error {
-	return webDavReadOnlyError
+	return errWebDavReadOnly
 }
 
 func (backend) DeleteAddressBook(context.Context, string) error {
-	return webDavReadOnlyError
+	return errWebDavReadOnly
 }
 
 func (backend) PutAddressObject(context.Context, string, vcard.Card, *gocarddav.PutAddressObjectOptions) (*gocarddav.AddressObject, error) {
-	return nil, webDavReadOnlyError
+	return nil, errWebDavReadOnly
 }
 
 func (backend) DeleteAddressObject(context.Context, string) error {
-	return webDavReadOnlyError
+	return errWebDavReadOnly
 }
 
 func idFromPath(p string) string {
@@ -140,7 +140,7 @@ func toObject(c database.ContactView) (gocarddav.AddressObject, error) {
 	if err := vcard.NewEncoder(&buf).Encode(card); err != nil {
 		return gocarddav.AddressObject{}, fmt.Errorf("encoding vcard: %w", err)
 	}
-	sum := sha1.Sum(buf.Bytes())
+	sum := sha256.Sum256(buf.Bytes())
 
 	return gocarddav.AddressObject{
 		Path:          addressBookPath + c.ID + ".vcf",
