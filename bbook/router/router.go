@@ -2,6 +2,9 @@ package router
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
 	"html/template"
@@ -35,13 +38,19 @@ type indexTmplData struct {
 
 type integrationsTmplData struct {
 	DavURL       string
+	New          newIntegration
 	Integrations []integrationView
 }
 
-type integrationView struct {
-	ID    uuid.UUID
-	Name  string
+// just-created integration, rendered with its one-time token.
+type newIntegration struct {
+	ID    string
 	Token string
+}
+
+type integrationView struct {
+	ID   uuid.UUID
+	Name string
 }
 
 // RowsData is for the template rows.html.tmpl.
@@ -219,18 +228,28 @@ func Router(cfg *config.Config) *mux.Router {
 
 	// Render list of available CardDav integrations
 	protected.Methods("GET").Path("/api/dav").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		renderIntegrations(w, r, auth.CurrentUserSub(r))
+		renderIntegrations(w, r, auth.CurrentUserSub(r), newIntegration{})
 	})
 
-	// Create a new CardDav token
+	// Create a new CardDav token.
 	protected.Methods("POST").Path("/api/dav").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sub := auth.CurrentUserSub(r)
-		if _, err := database.Client.Queries.CreateTokenForUser(r.Context(), sub); err != nil {
+		secret, hash, err := newDavToken()
+		if err != nil {
+			log.Printf("create integration %s: generate token: %v", strconv.Quote(sub), err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		row, err := database.Client.Queries.CreateTokenForUser(r.Context(), database.CreateTokenForUserParams{
+			UserSub:   sub,
+			TokenHash: hash,
+		})
+		if err != nil {
 			log.Printf("create integration %s: %v", strconv.Quote(sub), err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-		renderIntegrations(w, r, sub)
+		renderIntegrations(w, r, sub, newIntegration{ID: row.ID.String(), Token: secret})
 	})
 
 	// Update a CardDav integration
@@ -270,7 +289,7 @@ func Router(cfg *config.Config) *mux.Router {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-		renderIntegrations(w, r, sub)
+		renderIntegrations(w, r, sub, newIntegration{})
 	})
 
 	// CardDAV for mail clients
@@ -303,18 +322,25 @@ func Router(cfg *config.Config) *mux.Router {
 
 func validDavToken(ctx context.Context, candidates ...string) bool {
 	for _, cand := range candidates {
-		id, err := uuid.Parse(strings.TrimSpace(cand))
-		if err != nil {
-			continue
-		}
-		if ok, err := database.Client.Queries.TokenValid(ctx, id); err == nil && ok {
+		h := sha256.Sum256([]byte(strings.TrimSpace(cand)))
+		if ok, err := database.Client.Queries.TokenValidByHash(ctx, h[:]); err == nil && ok {
 			return true
 		}
 	}
 	return false
 }
 
-func renderIntegrations(w http.ResponseWriter, r *http.Request, sub string) {
+func newDavToken() (secret string, hash []byte, err error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", nil, err
+	}
+	secret = "bbook_" + base64.RawURLEncoding.EncodeToString(b)
+	h := sha256.Sum256([]byte(secret))
+	return secret, h[:], nil
+}
+
+func renderIntegrations(w http.ResponseWriter, r *http.Request, sub string, created newIntegration) {
 	rows, err := database.Client.Queries.ListTokensForUser(r.Context(), sub)
 	if err != nil {
 		log.Printf("list integrations %s: %v", strconv.Quote(sub), err)
@@ -323,10 +349,11 @@ func renderIntegrations(w http.ResponseWriter, r *http.Request, sub string) {
 	}
 	views := make([]integrationView, len(rows))
 	for i, row := range rows {
-		views[i] = integrationView{ID: row.ID, Name: row.Name, Token: row.ID.String()}
+		views[i] = integrationView{ID: row.ID, Name: row.Name}
 	}
 	if err := tmpl.ExecuteTemplate(w, "integrations.html.tmpl", integrationsTmplData{
 		DavURL:       davBaseURL,
+		New:          created,
 		Integrations: views,
 	}); err != nil {
 		log.Printf("rendering integrations: %v", err)

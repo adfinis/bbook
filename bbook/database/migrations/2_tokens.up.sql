@@ -3,6 +3,7 @@ CREATE TABLE
         id UUID PRIMARY KEY DEFAULT uuidv7 (),
         user_sub TEXT NOT NULL,
         name TEXT NOT NULL DEFAULT '',
+        token_hash BYTEA NOT NULL UNIQUE,
         expires_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now ()
     );

@@ -57,16 +57,21 @@ func (q *Queries) AllContacts(ctx context.Context) ([]Contact, error) {
 }
 
 const createTokenForUser = `-- name: CreateTokenForUser :one
-INSERT INTO tokens (user_sub) VALUES ($1) RETURNING id, created_at
+INSERT INTO tokens (user_sub, token_hash) VALUES ($1, $2) RETURNING id, created_at
 `
+
+type CreateTokenForUserParams struct {
+	UserSub   string
+	TokenHash []byte
+}
 
 type CreateTokenForUserRow struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
 }
 
-func (q *Queries) CreateTokenForUser(ctx context.Context, userSub string) (CreateTokenForUserRow, error) {
-	row := q.db.QueryRowContext(ctx, createTokenForUser, userSub)
+func (q *Queries) CreateTokenForUser(ctx context.Context, arg CreateTokenForUserParams) (CreateTokenForUserRow, error) {
+	row := q.db.QueryRowContext(ctx, createTokenForUser, arg.UserSub, arg.TokenHash)
 	var i CreateTokenForUserRow
 	err := row.Scan(&i.ID, &i.CreatedAt)
 	return i, err
@@ -214,12 +219,12 @@ func (q *Queries) RenewTokensForUser(ctx context.Context, userSub string) (int64
 	return result.RowsAffected()
 }
 
-const tokenValid = `-- name: TokenValid :one
-SELECT EXISTS(SELECT 1 FROM tokens WHERE id = $1 AND (expires_at IS NULL OR expires_at > now()))
+const tokenValidByHash = `-- name: TokenValidByHash :one
+SELECT EXISTS(SELECT 1 FROM tokens WHERE token_hash = $1 AND (expires_at IS NULL OR expires_at > now()))
 `
 
-func (q *Queries) TokenValid(ctx context.Context, id uuid.UUID) (bool, error) {
-	row := q.db.QueryRowContext(ctx, tokenValid, id)
+func (q *Queries) TokenValidByHash(ctx context.Context, tokenHash []byte) (bool, error) {
+	row := q.db.QueryRowContext(ctx, tokenValidByHash, tokenHash)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err

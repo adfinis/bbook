@@ -33,6 +33,7 @@ type Token struct {
 	ID        uuid.UUID
 	UserSub   string
 	Name      string
+	TokenHash []byte
 	ExpiresAt sql.NullTime
 	CreatedAt time.Time
 }
