@@ -58,8 +58,15 @@ func Init(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("initializing auth: %w", err)
 	}
 
-	issuerCtx := oidc.InsecureIssuerURLContext(ctx, cfg.OIDCIssuerURL)
-	provider, err := oidc.NewProvider(issuerCtx, cfg.OIDCDiscoveryURL)
+	var provider *oidc.Provider
+	var err error
+	if cfg.OIDCInsecureSkipIssuerValidation {
+		// allow iss to be different from the issuer URL
+		issuerCtx := oidc.InsecureIssuerURLContext(ctx, cfg.OIDCIssuerURL)
+		provider, err = oidc.NewProvider(issuerCtx, cfg.OIDCDiscoveryURL)
+	} else {
+		provider, err = oidc.NewProvider(ctx, cfg.OIDCIssuerURL)
+	}
 	if err != nil {
 		return fmt.Errorf("initializing auth: discover provider: %w", err)
 	}

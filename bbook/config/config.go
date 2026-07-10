@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 )
 
 type Config struct {
@@ -21,12 +22,13 @@ type Config struct {
 	ZohoBaseURL      string
 	ZohoAccountsURL  string
 
-	OIDCIssuerURL    string
-	OIDCDiscoveryURL string
-	OIDCClientID     string
-	OIDCClientSecret string
-	OIDCRedirectURL  string
-	SessionSecret    string
+	OIDCIssuerURL                    string
+	OIDCDiscoveryURL                 string
+	OIDCInsecureSkipIssuerValidation bool
+	OIDCClientID                     string
+	OIDCClientSecret                 string
+	OIDCRedirectURL                  string
+	SessionSecret                    string
 }
 
 // reads the configuration from the environment.
@@ -48,6 +50,7 @@ func Load() *Config {
 
 	c.OIDCIssuerURL = os.Getenv("OIDC_ISSUER_URL")
 	c.OIDCDiscoveryURL = os.Getenv("OIDC_DISCOVERY_URL")
+	c.OIDCInsecureSkipIssuerValidation, _ = strconv.ParseBool(os.Getenv("OIDC_INSECURE_SKIP_ISSUER_VALIDATION"))
 	c.OIDCClientID = os.Getenv("OIDC_CLIENT_ID")
 	c.OIDCClientSecret = os.Getenv("OIDC_CLIENT_SECRET")
 	c.OIDCRedirectURL = os.Getenv("OIDC_REDIRECT_URL")
