@@ -109,7 +109,7 @@ func Router(cfg *config.Config) *mux.Router {
 	r.Use(loggingMiddleware)
 
 	r.Methods("GET").Path("/api/ping").HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte("pong!"))
+		w.Write([]byte("pong!")) //nolint:errcheck
 	})
 
 	// OIDC login flow
@@ -185,9 +185,9 @@ func Router(cfg *config.Config) *mux.Router {
 			w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 			w.Header().Set("Content-Disposition", `attachment; filename="contacts.csv"`)
 			cw := csv.NewWriter(w)
-			_ = cw.Write(database.ContactCSVHeader())
+			cw.Write(database.ContactCSVHeader()) //nolint:errcheck
 			for _, c := range contacts {
-				_ = cw.Write(c.ToCSV())
+				cw.Write(c.ToCSV()) //nolint:errcheck
 			}
 			cw.Flush()
 			if err := cw.Error(); err != nil {
@@ -201,8 +201,8 @@ func Router(cfg *config.Config) *mux.Router {
 			w.Header().Set("Content-Type", "text/vcard; charset=utf-8")
 			w.Header().Set("Content-Disposition", `attachment; filename="contacts.vcf"`)
 			for _, c := range contacts {
-				_, _ = w.Write([]byte(c.VCardString())) // #nosec G705 served as text/vcard attachment, not HTML
-				_, _ = w.Write([]byte("\r\n"))
+				w.Write([]byte(c.VCardString())) //nolint:errcheck,gosec // G705: served as a text/vcard attachment, not HTML
+				w.Write([]byte("\r\n"))          //nolint:errcheck
 			}
 			return
 		}

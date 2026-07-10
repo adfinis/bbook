@@ -22,7 +22,7 @@ func main() {
 	if err := database.Init(context.Background(), cfg); err != nil {
 		log.Fatalf("database: %v", err)
 	}
-	defer func() { _ = database.Client.DB.Close() }()
+	defer database.Client.DB.Close() //nolint:errcheck
 
 	if err := zoho.Init(cfg); err != nil {
 		log.Fatalf("zoho: %v", err)

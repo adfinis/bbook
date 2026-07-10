@@ -31,12 +31,12 @@ func Init(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("connecting to postgres: open: %w", err)
 	}
 	if err := db.PingContext(ctx); err != nil {
-		_ = db.Close()
+		db.Close() //nolint:errcheck
 		return fmt.Errorf("connecting to postgres: ping: %w", err)
 	}
 
 	if err := runMigrations(db); err != nil {
-		_ = db.Close()
+		db.Close() //nolint:errcheck
 		return err
 	}
 

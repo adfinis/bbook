@@ -51,7 +51,7 @@ func RunZohoSync(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = tx.Rollback() }() // no-op after a successful Commit
+	defer tx.Rollback() //nolint:errcheck // no-op after a successful Commit
 
 	q := database.Client.Queries.WithTx(tx)
 	for _, c := range contacts {
@@ -126,7 +126,7 @@ func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
 		if err != nil {
 			return nil, fmt.Errorf("fetching zoho contacts page %d: %w", pageNum, err)
 		}
-		defer func() { _ = resp.Body.Close() }()
+		defer resp.Body.Close() //nolint:errcheck
 
 		// No more content
 		if resp.StatusCode == http.StatusNoContent {
