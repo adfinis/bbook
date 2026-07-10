@@ -18,6 +18,8 @@ import (
 	"git.adfinis.com/int-infrastructure/bbook/bbook/server/search"
 )
 
+var ErrSyncDisabled = errors.New("zoho sync is disabled")
+
 var client zohoHTTPClient = zohoHTTPClient{}
 
 type zohoHTTPClient struct {
@@ -36,7 +38,7 @@ func Init(cfg *config.Config) error {
 // Fetches contacts from ZohoCRM and upserts them into the database, while deleting unavailable contacts.
 func RunZohoSync(ctx context.Context) error {
 	if !client.cfg.ZohoSyncEnabled {
-		return errors.New("Zoho sync is disabled")
+		return ErrSyncDisabled
 	}
 
 	runStart := time.Now()
@@ -79,7 +81,7 @@ func RunZohoSync(ctx context.Context) error {
 // Fetches all contacts from Zoho.
 func fetchContacts(ctx context.Context) ([]database.Contact, error) {
 	if !client.cfg.ZohoSyncEnabled {
-		return nil, errors.New("Zoho sync is disabled")
+		return nil, ErrSyncDisabled
 	}
 	var all []database.Contact
 
@@ -97,7 +99,7 @@ func fetchContacts(ctx context.Context) ([]database.Contact, error) {
 // https://www.zoho.com/crm/developer/docs/api/v8/get-records.html
 func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
 	if !client.cfg.ZohoSyncEnabled {
-		return nil, errors.New("Zoho sync is disabled")
+		return nil, ErrSyncDisabled
 	}
 
 	var prevPage rawContactsPage
@@ -162,7 +164,7 @@ func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
 
 func buildZohoRequest(ctx context.Context, method string, url string, body io.Reader) (*http.Request, error) {
 	if !client.cfg.ZohoSyncEnabled {
-		return nil, errors.New("Zoho sync is disabled")
+		return nil, ErrSyncDisabled
 	}
 
 	token, err := token(ctx)
