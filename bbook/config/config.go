@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -33,7 +34,7 @@ type Config struct {
 }
 
 // reads the configuration from the environment.
-func Load() *Config {
+func Load() (*Config, error) {
 	c := &Config{}
 	c.Env = os.Getenv("ENV")
 	c.BaseURL = baseURL()
@@ -58,7 +59,12 @@ func Load() *Config {
 	c.OIDCRequiredGroup = os.Getenv("OIDC_REQUIRED_GROUP")
 	c.SessionSecret = os.Getenv("SESSION_SECRET")
 
-	return c
+	// The secret keys the session HMAC and the offline token encryption.
+	if len(c.SessionSecret) < 32 {
+		return nil, fmt.Errorf("loading config: SESSION_SECRET must be at least 32 bytes, got %d", len(c.SessionSecret))
+	}
+
+	return c, nil
 }
 
 func baseURL() string {

@@ -14,10 +14,12 @@ import (
 )
 
 func main() {
-	cfg := config.Load()
-
-	err := database.Init(context.Background(), cfg)
+	cfg, err := config.Load()
 	if err != nil {
+		log.Fatalf("config: %v", err)
+	}
+
+	if err := database.Init(context.Background(), cfg); err != nil {
 		log.Fatalf("database: %v", err)
 	}
 	defer func() { _ = database.Client.DB.Close() }()
