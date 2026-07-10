@@ -119,19 +119,9 @@ func refreshOfflineToken(ctx context.Context, sub string, ct []byte) (bool, erro
 
 // Verifies the refreshed ID token and reports whether it still carries the required group.
 func refreshedTokenInGroup(ctx context.Context, tok *oauth2.Token) (bool, error) {
-	raw, ok := tok.Extra("id_token").(string)
-	if !ok {
-		return false, errors.New("checking refreshed token group: no id_token in refresh response")
-	}
-	idToken, err := verifier.Verify(ctx, raw)
+	idToken, err := verifyIDToken(ctx, tok)
 	if err != nil {
-		return false, fmt.Errorf("checking refreshed token group: verify id_token: %w", err)
+		return false, fmt.Errorf("checking refreshed token group: %w", err)
 	}
-	var claims struct {
-		Groups []string `json:"groups"`
-	}
-	if err := idToken.Claims(&claims); err != nil {
-		return false, fmt.Errorf("checking refreshed token group: parse claims: %w", err)
-	}
-	return inGroup(claims.Groups, requiredGroup), nil
+	return tokenInRequiredGroup(idToken)
 }

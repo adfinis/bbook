@@ -49,6 +49,8 @@ type flowClaims struct {
 	Exp      int64  `json:"exp"`
 }
 
+var errNoIDToken = errors.New("no id_token in token response")
+
 // Init discovers the OIDC provider and prepares the oauth2 config + verifier.
 func Init(ctx context.Context, cfg *config.Config) error {
 	if cfg.SessionSecret == "" {
@@ -170,16 +172,14 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "login failed", http.StatusBadGateway)
 		return
 	}
-	rawIDToken, ok := token.Extra("id_token").(string)
-	if !ok {
-		log.Printf("login callback: no id_token in token response")
-		http.Error(w, "login failed", http.StatusBadGateway)
-		return
-	}
-	idToken, err := verifier.Verify(r.Context(), rawIDToken)
+	idToken, err := verifyIDToken(r.Context(), token)
 	if err != nil {
-		log.Printf("login callback: verify id_token: %v", err)
-		http.Error(w, "login failed", http.StatusUnauthorized)
+		log.Printf("login callback: %v", err)
+		status := http.StatusUnauthorized
+		if errors.Is(err, errNoIDToken) {
+			status = http.StatusBadGateway
+		}
+		http.Error(w, "login failed", status)
 		return
 	}
 	if idToken.Nonce != flow.Nonce {
@@ -189,20 +189,16 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// A valid token is not enough, the user must be in the required group.
-	if requiredGroup != "" {
-		var claims struct {
-			Groups []string `json:"groups"`
-		}
-		if err := idToken.Claims(&claims); err != nil {
-			log.Printf("login callback: parse claims: %v", err)
-			http.Error(w, "login failed", http.StatusInternalServerError)
-			return
-		}
-		if !inGroup(claims.Groups, requiredGroup) {
-			log.Printf("login callback: user %s not in required group %s", strconv.Quote(idToken.Subject), strconv.Quote(requiredGroup))
-			http.Error(w, "access denied", http.StatusForbidden)
-			return
-		}
+	allowed, err := tokenInRequiredGroup(idToken)
+	if err != nil {
+		log.Printf("login callback: %v", err)
+		http.Error(w, "login failed", http.StatusInternalServerError)
+		return
+	}
+	if !allowed {
+		log.Printf("login callback: user %s not in required group %s", strconv.Quote(idToken.Subject), strconv.Quote(requiredGroup))
+		http.Error(w, "access denied", http.StatusForbidden)
+		return
 	}
 
 	sub := idToken.Subject
@@ -241,6 +237,33 @@ func inGroup(groups []string, want string) bool {
 	return slices.ContainsFunc(groups, func(g string) bool {
 		return strings.TrimPrefix(g, "/") == want
 	})
+}
+
+func verifyIDToken(ctx context.Context, tok *oauth2.Token) (*oidc.IDToken, error) {
+	raw, ok := tok.Extra("id_token").(string)
+	if !ok {
+		return nil, errNoIDToken
+	}
+	idToken, err := verifier.Verify(ctx, raw)
+	if err != nil {
+		return nil, fmt.Errorf("verify id_token: %w", err)
+	}
+	return idToken, nil
+}
+
+type tokenClaims struct {
+	Groups []string `json:"groups"`
+}
+
+func tokenInRequiredGroup(idToken *oidc.IDToken) (bool, error) {
+	if requiredGroup == "" {
+		return true, nil
+	}
+	var claims tokenClaims
+	if err := idToken.Claims(&claims); err != nil {
+		return false, fmt.Errorf("checking token group: parse claims: %w", err)
+	}
+	return inGroup(claims.Groups, requiredGroup), nil
 }
 
 func saveOfflineToken(ctx context.Context, sub, refreshToken string) error {
