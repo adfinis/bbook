@@ -118,7 +118,7 @@ func Router(cfg *config.Config) *mux.Router {
 		contacts, err := search.Search(q)
 		if err != nil {
 			log.Printf("search query %s: %v", strconv.Quote(q), err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "search failed", http.StatusInternalServerError)
 			return
 		}
 
@@ -147,7 +147,7 @@ func Router(cfg *config.Config) *mux.Router {
 		contacts, err := search.Search(q)
 		if err != nil {
 			log.Printf("search query %s: %v", strconv.Quote(q), err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "search failed", http.StatusInternalServerError)
 			return
 		}
 

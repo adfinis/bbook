@@ -107,11 +107,13 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	state, err := randString(24)
 	if err != nil {
+		log.Printf("login: generate state: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	nonce, err := randString(24)
 	if err != nil {
+		log.Printf("login: generate nonce: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -122,6 +124,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Exp:      time.Now().Add(flowTTL).Unix(),
 	}
 	if err := setSignedCookie(w, flowCookieName, flow, flowTTL); err != nil {
+		log.Printf("login: set flow cookie: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -132,7 +135,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	var flow flowClaims
 	if err := readSignedCookie(r, flowCookieName, &flow); err != nil {
-		http.Error(w, "invalid login flow: "+err.Error(), http.StatusBadRequest)
+		log.Printf("login callback: read flow cookie: %v", err)
+		http.Error(w, "login failed", http.StatusBadRequest)
 		return
 	}
 	if time.Now().Unix() > flow.Exp {
@@ -140,27 +144,32 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.URL.Query().Get("state") != flow.State {
-		http.Error(w, "state mismatch", http.StatusBadRequest)
+		log.Printf("login callback: state mismatch")
+		http.Error(w, "login failed", http.StatusBadRequest)
 		return
 	}
 
 	token, err := oauthCfg.Exchange(r.Context(), r.URL.Query().Get("code"))
 	if err != nil {
-		http.Error(w, "code exchange: "+err.Error(), http.StatusBadGateway)
+		log.Printf("login callback: code exchange: %v", err)
+		http.Error(w, "login failed", http.StatusBadGateway)
 		return
 	}
 	rawIDToken, ok := token.Extra("id_token").(string)
 	if !ok {
-		http.Error(w, "no id_token in response", http.StatusBadGateway)
+		log.Printf("login callback: no id_token in token response")
+		http.Error(w, "login failed", http.StatusBadGateway)
 		return
 	}
 	idToken, err := verifier.Verify(r.Context(), rawIDToken)
 	if err != nil {
-		http.Error(w, "verify id_token: "+err.Error(), http.StatusUnauthorized)
+		log.Printf("login callback: verify id_token: %v", err)
+		http.Error(w, "login failed", http.StatusUnauthorized)
 		return
 	}
 	if idToken.Nonce != flow.Nonce {
-		http.Error(w, "nonce mismatch", http.StatusBadRequest)
+		log.Printf("login callback: nonce mismatch")
+		http.Error(w, "login failed", http.StatusBadRequest)
 		return
 	}
 
@@ -169,7 +178,8 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	// Persist the offline refresh so the cleanup goroutine can later check if the user is still allowed.
 	if token.RefreshToken != "" && sub != "" {
 		if err := saveOfflineToken(r.Context(), sub, token.RefreshToken); err != nil {
-			http.Error(w, "store offline token: "+err.Error(), http.StatusInternalServerError)
+			log.Printf("login callback: store offline token for %s: %v", strconv.Quote(sub), err)
+			http.Error(w, "login failed", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -186,7 +196,8 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		Exp: time.Now().Add(sessionTTL).Unix(),
 	}
 	if err := setSignedCookie(w, sessionCookieName, session, sessionTTL); err != nil {
-		http.Error(w, "set session: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("login callback: set session: %v", err)
+		http.Error(w, "login failed", http.StatusInternalServerError)
 		return
 	}
 	clearCookie(w, flowCookieName)
