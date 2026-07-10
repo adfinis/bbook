@@ -3,6 +3,7 @@ package zoho
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -34,6 +35,10 @@ func Init(cfg *config.Config) error {
 
 // Fetches contacts from ZohoCRM and upserts them into the database, while deleting unavailable contacts.
 func RunZohoSync(ctx context.Context) error {
+	if !client.cfg.ZohoSyncEnabled {
+		return errors.New("Zoho sync is disabled")
+	}
+
 	runStart := time.Now()
 	contacts, err := fetchContacts(ctx)
 	if err != nil {
@@ -73,6 +78,9 @@ func RunZohoSync(ctx context.Context) error {
 
 // Fetches all contacts from Zoho.
 func fetchContacts(ctx context.Context) ([]database.Contact, error) {
+	if !client.cfg.ZohoSyncEnabled {
+		return nil, errors.New("Zoho sync is disabled")
+	}
 	var all []database.Contact
 
 	rawContacts, err := fetchContactsV8(ctx)
@@ -88,6 +96,10 @@ func fetchContacts(ctx context.Context) ([]database.Contact, error) {
 
 // https://www.zoho.com/crm/developer/docs/api/v8/get-records.html
 func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
+	if !client.cfg.ZohoSyncEnabled {
+		return nil, errors.New("Zoho sync is disabled")
+	}
+
 	var prevPage rawContactsPage
 	res := &[]rawZohoContact{}
 	pageNum := 1
@@ -149,6 +161,10 @@ func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
 }
 
 func buildZohoRequest(ctx context.Context, method string, url string, body io.Reader) (*http.Request, error) {
+	if !client.cfg.ZohoSyncEnabled {
+		return nil, errors.New("Zoho sync is disabled")
+	}
+
 	token, err := token(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)

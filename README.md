@@ -13,13 +13,16 @@ The application is a single Go binary that runs an HTTP server. Around it:
 * **CardDAV** is served under `/api/dav`. Mail clients authenticate with per-client tokens that users generate from the UI.
 
 ## Development
+Most environment variables are already filled out for development in [`.env`](docker/.env), [`.db.env`](docker/.db.env) and [`.backend.env`](docker/.backend.env). Check the files for additional configuration options.
 
+The included Keycloak instance is preconfigured with a realm, client and a test user (username: **dev**, password: **dev**)
+
+You can start right away:
 ```sh
 cd docker
 docker compose up
 ```
 
-Configuration is read from the `.env`, `.db.env` and `.backend.env` files in `docker/`.
 
 ## CI and releases
 

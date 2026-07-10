@@ -22,6 +22,7 @@ type Config struct {
 	ZohoRefreshToken string
 	ZohoBaseURL      string
 	ZohoAccountsURL  string
+	ZohoSyncEnabled  bool
 
 	OIDCIssuerURL                    string
 	OIDCDiscoveryURL                 string
@@ -49,6 +50,7 @@ func Load() (*Config, error) {
 	c.ZohoRefreshToken = os.Getenv("ZOHO_REFRESH_TOKEN")
 	c.ZohoBaseURL = os.Getenv("ZOHO_BASE_URL")
 	c.ZohoAccountsURL = os.Getenv("ZOHO_ACCOUNTS_URL")
+	c.ZohoSyncEnabled, _ = strconv.ParseBool(os.Getenv("ZOHO_SYNC_ENABLED"))
 
 	c.OIDCIssuerURL = os.Getenv("OIDC_ISSUER_URL")
 	c.OIDCDiscoveryURL = os.Getenv("OIDC_DISCOVERY_URL")
@@ -59,7 +61,6 @@ func Load() (*Config, error) {
 	c.OIDCRequiredGroup = os.Getenv("OIDC_REQUIRED_GROUP")
 	c.SessionSecret = os.Getenv("SESSION_SECRET")
 
-	// The secret keys the session HMAC and the offline token encryption.
 	if len(c.SessionSecret) < 32 {
 		return nil, fmt.Errorf("loading config: SESSION_SECRET must be at least 32 bytes, got %d", len(c.SessionSecret))
 	}

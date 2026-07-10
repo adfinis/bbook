@@ -46,6 +46,8 @@ services:
     depends_on:
       bbook-db:
         condition: service_healthy
+      bbook-keycloak:
+        condition: service_healthy
 
   bbook-db:
     container_name: bbook-db
@@ -88,6 +90,17 @@ services:
       KC_HOSTNAME_STRICT: "false"
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && echo -en 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
     volumes:
       - ./keycloak/realm-bbook.json:/opt/keycloak/data/import/realm-bbook.json:ro
       - /etc/timezone:/etc/timezone
