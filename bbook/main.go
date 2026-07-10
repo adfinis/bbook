@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"git.adfinis.com/int-infrastructure/bbook/bbook/auth"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/config"
 	"git.adfinis.com/int-infrastructure/bbook/bbook/database"
 	"git.adfinis.com/int-infrastructure/bbook/bbook/server"
 	"git.adfinis.com/int-infrastructure/bbook/bbook/zoho"
@@ -13,17 +14,19 @@ import (
 )
 
 func main() {
-	err := database.Init(context.Background())
+	cfg := config.Load()
+
+	err := database.Init(context.Background(), cfg)
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
 	defer func() { _ = database.Client.DB.Close() }()
 
-	if err := zoho.Init(); err != nil {
+	if err := zoho.Init(cfg); err != nil {
 		log.Fatalf("zoho: %v", err)
 	}
 
-	if err := auth.Init(context.Background()); err != nil {
+	if err := auth.Init(context.Background(), cfg); err != nil {
 		log.Fatalf("auth: %v", err)
 	}
 
@@ -36,7 +39,7 @@ func main() {
 				Name:        "server",
 				Description: "Start the HTTP server",
 				Action: func(ctx context.Context, _ *cli.Command) error {
-					return server.Start(ctx)
+					return server.Start(ctx, cfg)
 				},
 			},
 		},

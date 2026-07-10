@@ -4,9 +4,7 @@ import (
 	"os"
 )
 
-var AppConfig config = parse()
-
-type config struct {
+type Config struct {
 	Env string
 
 	BaseURL string
@@ -31,8 +29,9 @@ type config struct {
 	SessionSecret    string
 }
 
-func parse() config {
-	c := config{}
+// reads the configuration from the environment.
+func Load() *Config {
+	c := &Config{}
 	c.Env = os.Getenv("ENV")
 	c.BaseURL = baseURL()
 	c.PostgresHost = os.Getenv("POSTGRES_HOST")

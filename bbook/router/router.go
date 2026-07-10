@@ -90,7 +90,11 @@ func pageSlice(contacts []database.ContactView, page int) []database.ContactView
 	return contacts[start:end]
 }
 
-func Router() *mux.Router {
+// davBaseURL is the CardDAV server URL clients point at, shared across tokens.
+var davBaseURL string
+
+func Router(cfg *config.Config) *mux.Router {
+	davBaseURL = strings.TrimSuffix(cfg.BaseURL, "/") + carddav.Prefix + "/"
 	r := mux.NewRouter()
 
 	r.Use(loggingMiddleware)
@@ -310,11 +314,6 @@ func validDavToken(ctx context.Context, candidates ...string) bool {
 	return false
 }
 
-// davBaseURL is the CardDAV server URL clients point at, shared across tokens.
-func davBaseURL() string {
-	return strings.TrimSuffix(config.AppConfig.BaseURL, "/") + carddav.Prefix + "/"
-}
-
 func renderIntegrations(w http.ResponseWriter, r *http.Request, sub string) {
 	rows, err := database.Client.Queries.ListTokensForUser(r.Context(), sub)
 	if err != nil {
@@ -327,7 +326,7 @@ func renderIntegrations(w http.ResponseWriter, r *http.Request, sub string) {
 		views[i] = integrationView{ID: row.ID, Name: row.Name, Token: row.ID.String()}
 	}
 	if err := tmpl.ExecuteTemplate(w, "integrations.html.tmpl", integrationsTmplData{
-		DavURL:       davBaseURL(),
+		DavURL:       davBaseURL,
 		Integrations: views,
 	}); err != nil {
 		log.Printf("rendering integrations: %v", err)

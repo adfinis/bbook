@@ -21,12 +21,14 @@ var client zohoHTTPClient = zohoHTTPClient{}
 
 type zohoHTTPClient struct {
 	httpClient  *http.Client
+	cfg         *config.Config
 	accessToken string
 	expiry      time.Time
 }
 
-func Init() error {
+func Init(cfg *config.Config) error {
 	client.httpClient = &http.Client{Timeout: 30 * time.Second}
+	client.cfg = cfg
 	return nil
 }
 
@@ -90,7 +92,7 @@ func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
 	res := &[]rawZohoContact{}
 	pageNum := 1
 	for ; ; pageNum++ {
-		u := fmt.Sprintf("%s/crm/v8/Contacts?fields=%s", config.AppConfig.ZohoBaseURL, contactFields)
+		u := fmt.Sprintf("%s/crm/v8/Contacts?fields=%s", client.cfg.ZohoBaseURL, contactFields)
 		if pageNum == 1 {
 			u += fmt.Sprintf("&page=%d", pageNum)
 		} else if prevPage.Info.NextPageToken != "" {
@@ -247,12 +249,12 @@ func token(ctx context.Context) (string, error) {
 	// Token needs to be refreshed
 
 	form := url.Values{}
-	form.Set("client_id", config.AppConfig.ZohoClientID)
-	form.Set("client_secret", config.AppConfig.ZohoClientSecret)
+	form.Set("client_id", client.cfg.ZohoClientID)
+	form.Set("client_secret", client.cfg.ZohoClientSecret)
 	form.Set("grant_type", "refresh_token")
-	form.Set("refresh_token", config.AppConfig.ZohoRefreshToken)
+	form.Set("refresh_token", client.cfg.ZohoRefreshToken)
 
-	endpoint := config.AppConfig.ZohoAccountsURL + "/oauth/v2/token"
+	endpoint := client.cfg.ZohoAccountsURL + "/oauth/v2/token"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
 	if err != nil {
 		return "", fmt.Errorf("refreshing zoho access token: build request: %w", err)

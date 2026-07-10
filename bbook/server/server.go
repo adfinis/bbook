@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"git.adfinis.com/int-infrastructure/bbook/bbook/auth"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/config"
 	"git.adfinis.com/int-infrastructure/bbook/bbook/database"
 	"git.adfinis.com/int-infrastructure/bbook/bbook/router"
 	"git.adfinis.com/int-infrastructure/bbook/bbook/server/search"
@@ -17,7 +18,7 @@ import (
 
 const addr = ":8081"
 
-func Start(ctx context.Context) error {
+func Start(ctx context.Context, cfg *config.Config) error {
 	// Build the search index from the DB on startup
 	if contacts, err := database.Client.Queries.AllContacts(ctx); err != nil {
 		log.Printf("initial search index: load contacts: %v", err)
@@ -26,7 +27,7 @@ func Start(ctx context.Context) error {
 	}
 
 	srv := &http.Server{
-		Handler:      router.Router(),
+		Handler:      router.Router(cfg),
 		Addr:         addr,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,

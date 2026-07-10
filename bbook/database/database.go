@@ -20,11 +20,11 @@ type database struct {
 
 var Client database = database{}
 
-func Init(ctx context.Context) error {
+func Init(ctx context.Context, cfg *config.Config) error {
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s/%s%s",
-		config.AppConfig.PostgresUser, config.AppConfig.PostgresPassword,
-		config.AppConfig.PostgresHost, config.AppConfig.PostgresDB, config.AppConfig.ConnectionStringParams,
+		cfg.PostgresUser, cfg.PostgresPassword,
+		cfg.PostgresHost, cfg.PostgresDB, cfg.ConnectionStringParams,
 	)
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {

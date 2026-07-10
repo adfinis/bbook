@@ -48,27 +48,27 @@ type flowClaims struct {
 }
 
 // Init discovers the OIDC provider and prepares the oauth2 config + verifier.
-func Init(ctx context.Context) error {
-	if config.AppConfig.SessionSecret == "" {
+func Init(ctx context.Context, cfg *config.Config) error {
+	if cfg.SessionSecret == "" {
 		return errors.New("initializing auth: SESSION_SECRET is empty")
 	}
-	secret = []byte(config.AppConfig.SessionSecret)
+	secret = []byte(cfg.SessionSecret)
 
 	if err := initCrypto(); err != nil {
 		return fmt.Errorf("initializing auth: %w", err)
 	}
 
-	issuerCtx := oidc.InsecureIssuerURLContext(ctx, config.AppConfig.OIDCIssuerURL)
-	provider, err := oidc.NewProvider(issuerCtx, config.AppConfig.OIDCDiscoveryURL)
+	issuerCtx := oidc.InsecureIssuerURLContext(ctx, cfg.OIDCIssuerURL)
+	provider, err := oidc.NewProvider(issuerCtx, cfg.OIDCDiscoveryURL)
 	if err != nil {
 		return fmt.Errorf("initializing auth: discover provider: %w", err)
 	}
-	verifier = provider.Verifier(&oidc.Config{ClientID: config.AppConfig.OIDCClientID})
+	verifier = provider.Verifier(&oidc.Config{ClientID: cfg.OIDCClientID})
 	oauthCfg = &oauth2.Config{
-		ClientID:     config.AppConfig.OIDCClientID,
-		ClientSecret: config.AppConfig.OIDCClientSecret,
+		ClientID:     cfg.OIDCClientID,
+		ClientSecret: cfg.OIDCClientSecret,
 		Endpoint:     provider.Endpoint(),
-		RedirectURL:  config.AppConfig.OIDCRedirectURL,
+		RedirectURL:  cfg.OIDCRedirectURL,
 		Scopes:       []string{oidc.ScopeOpenID, "email", "profile", "offline_access"},
 	}
 	return nil
