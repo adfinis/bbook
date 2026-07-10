@@ -28,6 +28,7 @@ type Config struct {
 	OIDCClientID                     string
 	OIDCClientSecret                 string
 	OIDCRedirectURL                  string
+	OIDCRequiredGroup                string
 	SessionSecret                    string
 }
 
@@ -54,6 +55,7 @@ func Load() *Config {
 	c.OIDCClientID = os.Getenv("OIDC_CLIENT_ID")
 	c.OIDCClientSecret = os.Getenv("OIDC_CLIENT_SECRET")
 	c.OIDCRedirectURL = os.Getenv("OIDC_REDIRECT_URL")
+	c.OIDCRequiredGroup = os.Getenv("OIDC_REQUIRED_GROUP")
 	c.SessionSecret = os.Getenv("SESSION_SECRET")
 
 	return c

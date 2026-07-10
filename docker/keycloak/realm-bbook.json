@@ -9,6 +9,11 @@
   "editUsernameAllowed": false,
   "bruteForceProtected": false,
   "accessTokenLifespan": 3600,
+  "groups": [
+    {
+      "name": "bbook-users"
+    }
+  ],
   "clients": [
     {
       "clientId": "bbook",
@@ -30,7 +35,22 @@
       ],
       "attributes": {
         "post.logout.redirect.uris": "https://localhost/*##http://localhost:8081/*"
-      }
+      },
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "groups"
+          }
+        }
+      ]
     }
   ],
   "users": [
@@ -45,6 +65,23 @@
         {
           "type": "password",
           "value": "dev",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["default-roles-bbook"],
+      "groups": ["/bbook-users"]
+    },
+    {
+      "username": "outsider",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "outsider@bbook.localhost",
+      "firstName": "Out",
+      "lastName": "Sider",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "outsider",
           "temporary": false
         }
       ],

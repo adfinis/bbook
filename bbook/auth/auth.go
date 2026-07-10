@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -30,9 +31,10 @@ const (
 )
 
 var (
-	verifier *oidc.IDTokenVerifier
-	oauthCfg *oauth2.Config
-	secret   []byte
+	verifier      *oidc.IDTokenVerifier
+	oauthCfg      *oauth2.Config
+	secret        []byte
+	requiredGroup string
 )
 
 type sessionClaims struct {
@@ -70,6 +72,11 @@ func Init(ctx context.Context, cfg *config.Config) error {
 	if err != nil {
 		return fmt.Errorf("initializing auth: discover provider: %w", err)
 	}
+	requiredGroup = cfg.OIDCRequiredGroup
+	if requiredGroup == "" {
+		log.Printf("auth: OIDC_REQUIRED_GROUP not set, any authenticated user can log in")
+	}
+
 	verifier = provider.Verifier(&oidc.Config{ClientID: cfg.OIDCClientID})
 	oauthCfg = &oauth2.Config{
 		ClientID:     cfg.OIDCClientID,
@@ -173,6 +180,23 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// A valid token is not enough, the user must be in the required group.
+	if requiredGroup != "" {
+		var claims struct {
+			Groups []string `json:"groups"`
+		}
+		if err := idToken.Claims(&claims); err != nil {
+			log.Printf("login callback: parse claims: %v", err)
+			http.Error(w, "login failed", http.StatusInternalServerError)
+			return
+		}
+		if !inGroup(claims.Groups, requiredGroup) {
+			log.Printf("login callback: user %s not in required group %s", strconv.Quote(idToken.Subject), strconv.Quote(requiredGroup))
+			http.Error(w, "access denied", http.StatusForbidden)
+			return
+		}
+	}
+
 	sub := idToken.Subject
 
 	// Persist the offline refresh so the cleanup goroutine can later check if the user is still allowed.
@@ -202,6 +226,13 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	clearCookie(w, flowCookieName)
 	http.Redirect(w, r, flow.ReturnTo, http.StatusFound)
+}
+
+func inGroup(groups []string, want string) bool {
+	want = strings.TrimPrefix(want, "/")
+	return slices.ContainsFunc(groups, func(g string) bool {
+		return strings.TrimPrefix(g, "/") == want
+	})
 }
 
 func saveOfflineToken(ctx context.Context, sub, refreshToken string) error {

@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -96,10 +97,41 @@ func refreshOfflineToken(ctx context.Context, sub string, ct []byte) (bool, erro
 		}
 		return false, err
 	}
+
+	// A successful refresh is not enough, the user must also still be in the required group.
+	if requiredGroup != "" {
+		allowed, err := refreshedTokenInGroup(ctx, tok)
+		if err != nil {
+			return false, err
+		}
+		if !allowed {
+			return false, nil
+		}
+	}
+
 	if tok.RefreshToken != "" && tok.RefreshToken != string(rt) {
 		if err := saveOfflineToken(ctx, sub, tok.RefreshToken); err != nil {
 			return true, err
 		}
 	}
 	return true, nil
+}
+
+// Verifies the refreshed ID token and reports whether it still carries the required group.
+func refreshedTokenInGroup(ctx context.Context, tok *oauth2.Token) (bool, error) {
+	raw, ok := tok.Extra("id_token").(string)
+	if !ok {
+		return false, errors.New("checking refreshed token group: no id_token in refresh response")
+	}
+	idToken, err := verifier.Verify(ctx, raw)
+	if err != nil {
+		return false, fmt.Errorf("checking refreshed token group: verify id_token: %w", err)
+	}
+	var claims struct {
+		Groups []string `json:"groups"`
+	}
+	if err := idToken.Claims(&claims); err != nil {
+		return false, fmt.Errorf("checking refreshed token group: parse claims: %w", err)
+	}
+	return inGroup(claims.Groups, requiredGroup), nil
 }
