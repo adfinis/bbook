@@ -11,7 +11,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const cleanupInterval = 5 * time.Minute
+const cleanupInterval = time.Hour
 
 // Runs a periodic sweep that revokes access tokens for users Keycloak no longer allows.
 func StartTokenCleanup(ctx context.Context) {
