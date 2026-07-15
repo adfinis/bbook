@@ -1,12 +1,22 @@
 {
-  email albert.cerfeda@adfinis.com
+  email <email>
 }
 
 
 {$BBOOK_SCHEME}://{$BBOOK_HOSTNAME} {$BBOOK_SCHEME}://www.{$BBOOK_HOSTNAME} {
 	log {
-    level DEBUG
-  }
+		level DEBUG
+		# Redact the OIDC callback's code/state.
+		format filter {
+			wrap console
+			fields {
+				request>uri query {
+					replace code REDACTED
+					replace state REDACTED
+				}
+			}
+		}
+	}
 
-  reverse_proxy http://bbook:8081
+	reverse_proxy http://bbook:8081
 }
