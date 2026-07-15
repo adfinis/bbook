@@ -44,6 +44,7 @@ type sessionClaims struct {
 type flowClaims struct {
 	State    string `json:"state"`
 	Nonce    string `json:"nonce"`
+	Verifier string `json:"verifier"` // PKCE
 	ReturnTo string `json:"return_to"`
 	Exp      int64  `json:"exp"`
 }
@@ -133,9 +134,11 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	verifier := oauth2.GenerateVerifier()
 	flow := flowClaims{
 		State:    state,
 		Nonce:    nonce,
+		Verifier: verifier,
 		ReturnTo: returnTo,
 		Exp:      time.Now().Add(flowTTL).Unix(),
 	}
@@ -144,7 +147,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, oauthCfg.AuthCodeURL(state, oidc.Nonce(nonce)), http.StatusFound)
+	http.Redirect(w, r, oauthCfg.AuthCodeURL(state, oidc.Nonce(nonce), oauth2.S256ChallengeOption(verifier)), http.StatusFound)
 }
 
 // Completes the auth-code flow.
@@ -165,7 +168,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := oauthCfg.Exchange(r.Context(), r.URL.Query().Get("code"))
+	token, err := oauthCfg.Exchange(r.Context(), r.URL.Query().Get("code"), oauth2.VerifierOption(flow.Verifier))
 	if err != nil {
 		slog.ErrorContext(r.Context(), "login callback: code exchange", "err", err)
 		http.Error(w, "login failed", http.StatusBadGateway)
