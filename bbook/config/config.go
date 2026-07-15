@@ -2,13 +2,14 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
-	Env string
-
 	LogFormat string // "json" or "text"
 	LogLevel  string // debug/info/warn/error
 
@@ -40,7 +41,6 @@ type Config struct {
 // reads the configuration from the environment.
 func Load() (*Config, error) {
 	c := &Config{}
-	c.Env = os.Getenv("ENV")
 	c.LogFormat = os.Getenv("LOG_FORMAT")
 	c.LogLevel = os.Getenv("LOG_LEVEL")
 	c.BaseURL = baseURL()
@@ -66,11 +66,54 @@ func Load() (*Config, error) {
 	c.OIDCRequiredGroup = os.Getenv("OIDC_REQUIRED_GROUP")
 	c.SessionSecret = os.Getenv("SESSION_SECRET")
 
-	if len(c.SessionSecret) < 32 {
-		return nil, fmt.Errorf("loading config: SESSION_SECRET must be at least 32 bytes, got %d", len(c.SessionSecret))
+	return c, c.validate()
+}
+
+func (c *Config) validate() error {
+	var errs []string
+	require := func(name, val string) {
+		if val == "" {
+			errs = append(errs, name+" is required")
+		}
 	}
 
-	return c, nil
+	if u, err := url.Parse(c.BaseURL); err != nil || u.Host == "" {
+		errs = append(errs, "BBOOK_HOSTNAME is required")
+	}
+
+	require("POSTGRES_HOST", c.PostgresHost)
+	require("POSTGRES_USER", c.PostgresUser)
+	require("POSTGRES_PASSWORD", c.PostgresPassword)
+	require("POSTGRES_DB", c.PostgresDB)
+
+	require("OIDC_ISSUER_URL", c.OIDCIssuerURL)
+	require("OIDC_CLIENT_ID", c.OIDCClientID)
+	require("OIDC_CLIENT_SECRET", c.OIDCClientSecret)
+	require("OIDC_REDIRECT_URL", c.OIDCRedirectURL)
+	require("OIDC_DISCOVERY_URL", c.OIDCDiscoveryURL)
+	if c.OIDCInsecureSkipIssuerValidation {
+		slog.Warn("OIDC issuer validation disabled")
+	}
+
+	if len(c.SessionSecret) < 32 {
+		errs = append(errs, fmt.Sprintf("SESSION_SECRET must be at least 32 bytes, got %d", len(c.SessionSecret)))
+	}
+
+	// Zoho settings are only needed when the sync runs.
+	if c.ZohoSyncEnabled {
+		require("ZOHO_CLIENT_ID", c.ZohoClientID)
+		require("ZOHO_CLIENT_SECRET", c.ZohoClientSecret)
+		require("ZOHO_REFRESH_TOKEN", c.ZohoRefreshToken)
+		require("ZOHO_BASE_URL", c.ZohoBaseURL)
+		require("ZOHO_ACCOUNTS_URL", c.ZohoAccountsURL)
+	} else {
+		slog.Warn("zoho sync is disabled")
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("loading config: %s", strings.Join(errs, "; "))
+	}
+	return nil
 }
 
 func baseURL() string {
