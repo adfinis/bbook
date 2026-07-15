@@ -54,7 +54,7 @@ func Start(ctx context.Context, cfg *config.Config) error {
 		if !cfg.ZohoSyncEnabled {
 			return
 		}
-		ticker := time.NewTicker(5 * time.Minute)
+		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()
 		for {
 			log.Printf("zoho sync: start")
