@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"git.adfinis.com/int-infrastructure/bbook/bbook/database"
@@ -19,7 +19,7 @@ func StartTokenCleanup(ctx context.Context) {
 	defer ticker.Stop()
 	for {
 		if err := cleanupOnce(ctx); err != nil {
-			log.Printf("token cleanup: %v", err)
+			slog.ErrorContext(ctx, "token cleanup", "err", err)
 		}
 		select {
 		case <-ctx.Done():
@@ -40,7 +40,7 @@ func cleanupOnce(ctx context.Context) error {
 	for _, row := range rows {
 		ok, err := refreshOfflineToken(ctx, row.UserSub, row.OfflineToken)
 		if err != nil {
-			log.Printf("token cleanup: check %s: %v", row.UserSub, err)
+			slog.ErrorContext(ctx, "token cleanup: checking user", "sub", row.UserSub, "err", err)
 			continue
 		}
 		if !ok {
@@ -58,7 +58,7 @@ func cleanupOnce(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("token cleanup: expired %d tokens across %d users", n, len(disallowed))
+	slog.InfoContext(ctx, "token cleanup: revoked disallowed users", "tokens", n, "users", len(disallowed))
 	return nil
 }
 
@@ -70,9 +70,9 @@ func StartExpiredTokenPurge(ctx context.Context) {
 	defer ticker.Stop()
 	for {
 		if n, err := database.Client.Queries.DeleteLongExpiredTokens(ctx); err != nil {
-			log.Printf("token purge: %v", err)
+			slog.ErrorContext(ctx, "token purge", "err", err)
 		} else if n > 0 {
-			log.Printf("token purge: deleted %d long-expired tokens", n)
+			slog.InfoContext(ctx, "token purge: deleted long-expired tokens", "count", n)
 		}
 		select {
 		case <-ctx.Done():
@@ -93,7 +93,7 @@ func refreshOfflineToken(ctx context.Context, sub string, ct []byte) (bool, erro
 	if err != nil {
 		var rErr *oauth2.RetrieveError
 		if errors.As(err, &rErr) && rErr.ErrorCode == "invalid_grant" {
-			log.Printf("token cleanup: revoking %s: refresh grant invalid", sub)
+			slog.InfoContext(ctx, "token cleanup: revoking user", "sub", sub, "reason", "invalid_grant")
 			return false, nil
 		}
 		return false, err

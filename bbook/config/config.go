@@ -9,6 +9,9 @@ import (
 type Config struct {
 	Env string
 
+	LogFormat string // "json" or "text"
+	LogLevel  string // debug/info/warn/error
+
 	BaseURL string
 
 	PostgresHost           string
@@ -38,6 +41,8 @@ type Config struct {
 func Load() (*Config, error) {
 	c := &Config{}
 	c.Env = os.Getenv("ENV")
+	c.LogFormat = os.Getenv("LOG_FORMAT")
+	c.LogLevel = os.Getenv("LOG_LEVEL")
 	c.BaseURL = baseURL()
 	c.PostgresHost = os.Getenv("POSTGRES_HOST")
 	c.PostgresUser = os.Getenv("POSTGRES_USER")

@@ -8,15 +8,17 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"html/template"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"git.adfinis.com/int-infrastructure/bbook/bbook/auth"
 	"git.adfinis.com/int-infrastructure/bbook/bbook/carddav"
 	"git.adfinis.com/int-infrastructure/bbook/bbook/config"
 	"git.adfinis.com/int-infrastructure/bbook/bbook/database"
+	"git.adfinis.com/int-infrastructure/bbook/bbook/logging"
 	"git.adfinis.com/int-infrastructure/bbook/bbook/server/search"
 	"git.adfinis.com/int-infrastructure/bbook/bbook/static"
 	"git.adfinis.com/int-infrastructure/bbook/bbook/templates"
@@ -126,7 +128,7 @@ func Router(cfg *config.Config) *mux.Router {
 
 		contacts, err := search.Search(q)
 		if err != nil {
-			log.Printf("search query %s: %v", strconv.Quote(q), err)
+			slog.ErrorContext(r.Context(), "search failed", "query", q, "err", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -137,7 +139,7 @@ func Router(cfg *config.Config) *mux.Router {
 			TotalRows:  len(contacts),
 			FieldNames: search.FieldNames,
 		}); err != nil {
-			log.Printf("rendering index: %v", err)
+			slog.ErrorContext(r.Context(), "rendering index", "err", err)
 		}
 	})
 
@@ -155,7 +157,7 @@ func Router(cfg *config.Config) *mux.Router {
 
 		contacts, err := search.Search(q)
 		if err != nil {
-			log.Printf("search query %s: %v", strconv.Quote(q), err)
+			slog.ErrorContext(r.Context(), "search failed", "query", q, "err", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -175,7 +177,7 @@ func Router(cfg *config.Config) *mux.Router {
 		if strings.Contains(accept, "application/json") {
 			w.Header().Set("Content-Type", "application/json")
 			if err := json.NewEncoder(w).Encode(contacts); err != nil {
-				log.Printf("encoding contacts json: %v", err)
+				slog.ErrorContext(r.Context(), "encoding contacts json", "err", err)
 			}
 			return
 		}
@@ -191,7 +193,7 @@ func Router(cfg *config.Config) *mux.Router {
 			}
 			cw.Flush()
 			if err := cw.Error(); err != nil {
-				log.Printf("writing contacts csv: %v", err)
+				slog.ErrorContext(r.Context(), "writing contacts csv", "err", err)
 			}
 			return
 		}
@@ -217,14 +219,14 @@ func Router(cfg *config.Config) *mux.Router {
 			if err := tmpl.ExecuteTemplate(w, "rows.html.tmpl", RowsData{
 				Contacts: pageSlice(contacts, page),
 			}); err != nil {
-				log.Printf("rendering page %d: %v", page, err)
+				slog.ErrorContext(r.Context(), "rendering page", "page", page, "err", err)
 			}
 			return
 		}
 
 		// Send first page plus placeholders for the rest
 		if err := tmpl.ExecuteTemplate(w, "rows.html.tmpl", paginateContacts(contacts, q)); err != nil {
-			log.Printf("rendering rows: %v", err)
+			slog.ErrorContext(r.Context(), "rendering rows", "err", err)
 		}
 	})
 
@@ -240,7 +242,7 @@ func Router(cfg *config.Config) *mux.Router {
 		sub := auth.CurrentUserSub(r)
 		secret, hash, err := newDavToken()
 		if err != nil {
-			log.Printf("create integration %s: generate token: %v", strconv.Quote(sub), err)
+			slog.ErrorContext(r.Context(), "create integration: generating token", "sub", sub, "err", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -249,7 +251,7 @@ func Router(cfg *config.Config) *mux.Router {
 			TokenHash: hash,
 		})
 		if err != nil {
-			log.Printf("create integration %s: %v", strconv.Quote(sub), err)
+			slog.ErrorContext(r.Context(), "create integration", "sub", sub, "err", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -270,7 +272,7 @@ func Router(cfg *config.Config) *mux.Router {
 			UserSub: sub,
 			Name:    name,
 		}); err != nil {
-			log.Printf("update integration name %s/%s: %v", strconv.Quote(sub), strconv.Quote(id.String()), err)
+			slog.ErrorContext(r.Context(), "update integration name", "sub", sub, "id", id, "err", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -289,7 +291,7 @@ func Router(cfg *config.Config) *mux.Router {
 			ID:      id,
 			UserSub: sub,
 		}); err != nil {
-			log.Printf("delete integration %s/%s: %v", strconv.Quote(sub), strconv.Quote(id.String()), err)
+			slog.ErrorContext(r.Context(), "delete integration", "sub", sub, "id", id, "err", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -347,7 +349,7 @@ func newDavToken() (secret string, hash []byte, err error) {
 func renderIntegrations(w http.ResponseWriter, r *http.Request, sub string, created newIntegration) {
 	rows, err := database.Client.Queries.ListTokensForUser(r.Context(), sub)
 	if err != nil {
-		log.Printf("list integrations %s: %v", strconv.Quote(sub), err)
+		slog.ErrorContext(r.Context(), "list integrations", "sub", sub, "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -360,13 +362,42 @@ func renderIntegrations(w http.ResponseWriter, r *http.Request, sub string, crea
 		New:          created,
 		Integrations: views,
 	}); err != nil {
-		log.Printf("rendering integrations: %v", err)
+		slog.ErrorContext(r.Context(), "rendering integrations", "err", err)
 	}
+}
+
+// captures the response status for request logging.
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (s *statusRecorder) WriteHeader(code int) {
+	s.status = code
+	s.ResponseWriter.WriteHeader(code)
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s %s", strconv.Quote(r.RemoteAddr), strconv.Quote(r.Method), strconv.Quote(r.URL.String()))
-		next.ServeHTTP(w, r)
+		start := time.Now()
+		ctx := logging.ContextWith(r.Context(), slog.String("req_id", requestID()))
+		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(rec, r.WithContext(ctx))
+		slog.InfoContext(ctx, "request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", rec.status,
+			"dur_ms", time.Since(start).Milliseconds(),
+			"ip", clientIP(r),
+		)
 	})
+}
+
+// short random identifier used to correlate a request's logs.
+func requestID() string {
+	var b [6]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "unknown"
+	}
+	return base64.RawURLEncoding.EncodeToString(b[:])
 }

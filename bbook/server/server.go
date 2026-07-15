@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os/signal"
 	"syscall"
@@ -21,9 +21,9 @@ const addr = ":8081"
 func Start(ctx context.Context, cfg *config.Config) error {
 	// Build the search index from the DB on startup
 	if contacts, err := database.Client.Queries.AllContacts(ctx); err != nil {
-		log.Printf("initial search index: load contacts: %v", err)
+		slog.Error("initial search index: loading contacts", "err", err)
 	} else if err := search.Rebuild(contacts); err != nil {
-		log.Printf("initial search index: rebuild: %v", err)
+		slog.Error("initial search index: rebuilding", "err", err)
 	}
 
 	srv := &http.Server{
@@ -40,7 +40,7 @@ func Start(ctx context.Context, cfg *config.Config) error {
 
 	serverErr := make(chan error, 1)
 	go func() {
-		log.Printf("Listening on %s ...", addr)
+		slog.Info("listening", "addr", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			serverErr <- err
 		}
@@ -59,11 +59,11 @@ func Start(ctx context.Context, cfg *config.Config) error {
 		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()
 		for {
-			log.Printf("zoho sync: start")
+			slog.Info("zoho sync: start")
 			if err := zoho.RunZohoSync(ctx); err != nil {
-				log.Printf("zoho sync job: %v", err)
+				slog.Error("zoho sync", "err", err)
 			}
-			log.Printf("zoho sync: done")
+			slog.Info("zoho sync: done")
 			select {
 			case <-ctx.Done():
 				return
@@ -76,7 +76,7 @@ func Start(ctx context.Context, cfg *config.Config) error {
 	case err := <-serverErr:
 		return err
 	case <-ctx.Done():
-		log.Println("Shutting down ...")
+		slog.Info("shutting down")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		return srv.Shutdown(shutdownCtx)

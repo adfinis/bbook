@@ -9,11 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -76,7 +75,7 @@ func Init(ctx context.Context, cfg *config.Config) error {
 	}
 	requiredGroup = cfg.OIDCRequiredGroup
 	if requiredGroup == "" {
-		log.Printf("auth: OIDC_REQUIRED_GROUP not set, any authenticated user can log in")
+		slog.Warn("OIDC_REQUIRED_GROUP not set, any authenticated user can log in")
 	}
 
 	verifier = provider.Verifier(&oidc.Config{ClientID: cfg.OIDCClientID})
@@ -118,19 +117,19 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	u, err := url.Parse(returnTo)
 	if err != nil || u.Scheme != "" || u.Host != "" ||
 		!strings.HasPrefix(returnTo, "/") || strings.Contains(returnTo, "\\") {
-		log.Printf("login: rejected return_to %s", strconv.Quote(returnTo))
+		slog.WarnContext(r.Context(), "login: rejected return_to", "return_to", returnTo)
 		http.Error(w, "invalid return_to", http.StatusBadRequest)
 		return
 	}
 	state, err := randString(24)
 	if err != nil {
-		log.Printf("login: generate state: %v", err)
+		slog.ErrorContext(r.Context(), "login: generating state", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	nonce, err := randString(24)
 	if err != nil {
-		log.Printf("login: generate nonce: %v", err)
+		slog.ErrorContext(r.Context(), "login: generating nonce", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -141,7 +140,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Exp:      time.Now().Add(flowTTL).Unix(),
 	}
 	if err := setSignedCookie(w, flowCookieName, flow, flowTTL); err != nil {
-		log.Printf("login: set flow cookie: %v", err)
+		slog.ErrorContext(r.Context(), "login: setting flow cookie", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -152,7 +151,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	var flow flowClaims
 	if err := readSignedCookie(r, flowCookieName, &flow); err != nil {
-		log.Printf("login callback: read flow cookie: %v", err)
+		slog.WarnContext(r.Context(), "login callback: reading flow cookie", "err", err)
 		http.Error(w, "login failed", http.StatusBadRequest)
 		return
 	}
@@ -161,20 +160,20 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.URL.Query().Get("state") != flow.State {
-		log.Printf("login callback: state mismatch")
+		slog.WarnContext(r.Context(), "login callback: state mismatch")
 		http.Error(w, "login failed", http.StatusBadRequest)
 		return
 	}
 
 	token, err := oauthCfg.Exchange(r.Context(), r.URL.Query().Get("code"))
 	if err != nil {
-		log.Printf("login callback: code exchange: %v", err)
+		slog.ErrorContext(r.Context(), "login callback: code exchange", "err", err)
 		http.Error(w, "login failed", http.StatusBadGateway)
 		return
 	}
 	idToken, err := verifyIDToken(r.Context(), token)
 	if err != nil {
-		log.Printf("login callback: %v", err)
+		slog.ErrorContext(r.Context(), "login callback: verifying id token", "err", err)
 		status := http.StatusUnauthorized
 		if errors.Is(err, errNoIDToken) {
 			status = http.StatusBadGateway
@@ -183,7 +182,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if idToken.Nonce != flow.Nonce {
-		log.Printf("login callback: nonce mismatch")
+		slog.WarnContext(r.Context(), "login callback: nonce mismatch")
 		http.Error(w, "login failed", http.StatusBadRequest)
 		return
 	}
@@ -191,12 +190,12 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	// A valid token is not enough, the user must be in the required group.
 	allowed, err := tokenInRequiredGroup(idToken)
 	if err != nil {
-		log.Printf("login callback: %v", err)
+		slog.ErrorContext(r.Context(), "login callback: checking group", "err", err)
 		http.Error(w, "login failed", http.StatusInternalServerError)
 		return
 	}
 	if !allowed {
-		log.Printf("login callback: user %s not in required group %s", strconv.Quote(idToken.Subject), strconv.Quote(requiredGroup))
+		slog.WarnContext(r.Context(), "login callback: user not in required group", "sub", idToken.Subject, "group", requiredGroup)
 		http.Error(w, "access denied", http.StatusForbidden)
 		return
 	}
@@ -206,7 +205,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	// Persist the offline refresh so the cleanup goroutine can later check if the user is still allowed.
 	if token.RefreshToken != "" && sub != "" {
 		if err := saveOfflineToken(r.Context(), sub, token.RefreshToken); err != nil {
-			log.Printf("login callback: store offline token for %s: %v", strconv.Quote(sub), err)
+			slog.ErrorContext(r.Context(), "login callback: storing offline token", "sub", sub, "err", err)
 			http.Error(w, "login failed", http.StatusInternalServerError)
 			return
 		}
@@ -215,7 +214,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	// Refresh a user's carddav access tokens once he logs in
 	if sub != "" {
 		if _, err := database.Client.Queries.RenewTokensForUser(r.Context(), sub); err != nil {
-			log.Printf("renew tokens for %s: %v", strconv.Quote(sub), err)
+			slog.ErrorContext(r.Context(), "login callback: renewing carddav tokens", "sub", sub, "err", err)
 		}
 	}
 
@@ -224,7 +223,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		Exp: time.Now().Add(sessionTTL).Unix(),
 	}
 	if err := setSignedCookie(w, sessionCookieName, session, sessionTTL); err != nil {
-		log.Printf("login callback: set session: %v", err)
+		slog.ErrorContext(r.Context(), "login callback: setting session", "err", err)
 		http.Error(w, "login failed", http.StatusInternalServerError)
 		return
 	}

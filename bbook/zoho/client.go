@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -68,14 +68,14 @@ func RunZohoSync(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("zoho sync: upserted %d, deleted %d stale", len(contacts), deleted)
+	slog.InfoContext(ctx, "zoho sync: upserted contacts", "upserted", len(contacts), "deleted_stale", deleted)
 	if err := tx.Commit(); err != nil {
 		return err
 	}
 
 	// Refresh the search index with the freshly-synced contacts.
 	if err := search.Rebuild(contacts); err != nil {
-		log.Printf("zoho sync: rebuild search index: %v", err)
+		slog.ErrorContext(ctx, "zoho sync: rebuilding search index", "err", err)
 	}
 	return nil
 }
@@ -145,7 +145,6 @@ func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
 			return nil, fmt.Errorf("fetching zoho contacts page %d: decode page: %w", pageNum, err)
 		}
 
-		// log.Printf("fetched %d contacts for page %d", len(page.Data), pageNum)
 		for _, raw := range page.Data {
 			var rc rawZohoContact
 			if err := json.Unmarshal(raw, &rc); err != nil {
@@ -160,7 +159,7 @@ func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
 		}
 		prevPage = page
 	}
-	log.Printf("fetched %d contacts in %d pages", len(*res), pageNum)
+	slog.InfoContext(ctx, "fetched zoho contacts", "count", len(*res), "pages", pageNum)
 	return res, nil
 }
 
