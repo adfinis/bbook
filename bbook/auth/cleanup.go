@@ -92,7 +92,8 @@ func refreshOfflineToken(ctx context.Context, sub string, ct []byte) (bool, erro
 	tok, err := ts.Token()
 	if err != nil {
 		var rErr *oauth2.RetrieveError
-		if errors.As(err, &rErr) {
+		if errors.As(err, &rErr) && rErr.ErrorCode == "invalid_grant" {
+			log.Printf("token cleanup: revoking %s: refresh grant invalid", sub)
 			return false, nil
 		}
 		return false, err
