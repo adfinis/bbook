@@ -209,7 +209,11 @@ func Router(cfg *config.Config) *mux.Router {
 
 		// Client asking for one page in particular
 		if pageStr := r.URL.Query().Get("page"); pageStr != "" {
-			page, _ := strconv.Atoi(pageStr)
+			page, err := strconv.Atoi(pageStr)
+			if err != nil {
+				http.Error(w, "invalid page", http.StatusBadRequest)
+				return
+			}
 			if err := tmpl.ExecuteTemplate(w, "rows.html.tmpl", RowsData{
 				Contacts: pageSlice(contacts, page),
 			}); err != nil {
