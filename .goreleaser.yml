@@ -4,7 +4,7 @@ project_name: bbook
 
 before:
   hooks:
-    - tailwindcss -i bbook/tailwind.input.css -o bbook/static/tailwind.css --minify
+    - sh -c "cd bbook && npm ci && npm run build"
 
 builds:
   - id: bbook

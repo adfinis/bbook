@@ -2,7 +2,7 @@ FROM golang:1.26-alpine
 
 WORKDIR /app
 
-RUN apk add git iputils bash bash-completion zsh fish
+RUN apk add git iputils bash bash-completion zsh fish nodejs npm
 
 # Needed for Tailwind compile
 RUN apk add libstdc++
@@ -22,8 +22,6 @@ RUN echo "bbook completion fish 2>/dev/null | source" >> ~/.config/fish/config.f
 RUN go install github.com/air-verse/air@v1.64.5
 RUN wget -qO- https://github.com/sqlc-dev/sqlc/releases/download/v1.31.0/sqlc_1.31.0_linux_amd64.tar.gz \
     | tar -xzC /usr/local/bin sqlc
-RUN wget -qO /usr/local/bin/tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.0/tailwindcss-linux-x64-musl \
-    && chmod +x /usr/local/bin/tailwindcss
 
 COPY go.mod go.sum ./
 RUN go mod download

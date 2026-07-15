@@ -34,9 +34,11 @@ services:
     restart: unless-stopped
     networks:
       - bbook-internal
-    command: ["air"]
+    # Install JS deps then run air.
+    command: ["sh", "-c", "[ -x node_modules/.bin/esbuild ] || npm ci; air"]
     volumes:
       - ../bbook:/app
+      - /app/node_modules
       - /etc/timezone:/etc/timezone
       - /etc/localtime:/etc/localtime
     env_file:
