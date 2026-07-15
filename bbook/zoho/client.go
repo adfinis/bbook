@@ -1,6 +1,7 @@
 package zoho
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"unicode"
 
 	"git.adfinis.com/int-infrastructure/bbook/bbook/config"
 	"git.adfinis.com/int-infrastructure/bbook/bbook/database"
@@ -241,21 +243,40 @@ func (r rawZohoContact) toContact() database.Contact {
 	if r.AccountName != nil {
 		org = r.AccountName.Name
 	}
+
 	return database.Contact{
-		ZohoID:       r.ID,
-		FirstName:    r.FirstName,
-		LastName:     r.LastName,
-		Organization: org,
-		Email:        r.Email,
-		Phone:        strings.ReplaceAll(r.Phone, " ", ""),
-		Mobile:       strings.ReplaceAll(r.Mobile, " ", ""),
-		Street:       r.MailingStreet,
-		City:         r.MailingCity,
-		PostalCode:   r.MailingZip,
-		Status:       r.Status,
+		ZohoID:       sanitizeField(r.ID),
+		FirstName:    sanitizeField(r.FirstName),
+		LastName:     sanitizeField(r.LastName),
+		Organization: sanitizeField(org),
+		Email:        sanitizeField(r.Email),
+		Phone:        sanitizeField(strings.ReplaceAll(r.Phone, " ", "")),
+		Mobile:       sanitizeField(strings.ReplaceAll(r.Mobile, " ", "")),
+		Street:       sanitizeField(r.MailingStreet),
+		City:         sanitizeField(r.MailingCity),
+		PostalCode:   sanitizeField(r.MailingZip),
+		Status:       sanitizeField(r.Status),
 		ModifiedTime: r.ModifiedTime,
-		Raw:          r.Raw,
+		Raw:          sanitizeRawJSON(r.Raw),
 	}
+}
+
+// drops invalid UTF-8, turns control chars into spaces and collapses whitespace .
+func sanitizeField(s string) string {
+	s = strings.ToValidUTF8(s, "")
+	s = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return ' '
+		}
+		return r
+	}, s)
+	// trims and removes consecutive white spaces
+	return strings.Join(strings.Fields(s), " ")
+}
+
+// strips the JSON NUL escape, which Postgres  rejects.
+func sanitizeRawJSON(raw json.RawMessage) json.RawMessage {
+	return bytes.ReplaceAll(raw, []byte{'\\', 'u', '0', '0', '0', '0'}, nil)
 }
 
 // Returns (and refreshes if necessary) the access token.
