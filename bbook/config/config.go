@@ -1,12 +1,12 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 )
 
 type Config struct {
@@ -41,6 +41,21 @@ type Config struct {
 // reads the configuration from the environment.
 func Load() (*Config, error) {
 	c := &Config{}
+	var errs []error
+	//  bools must be set to a valid strconv.ParseBool value.
+	boolVar := func(name string) bool {
+		s := os.Getenv(name)
+		if s == "" {
+			errs = append(errs, missingVarError(name))
+			return false
+		}
+		b, err := strconv.ParseBool(s)
+		if err != nil {
+			errs = append(errs, invalidBoolError(name))
+		}
+		return b
+	}
+
 	c.LogFormat = os.Getenv("LOG_FORMAT")
 	c.LogLevel = os.Getenv("LOG_LEVEL")
 	c.BaseURL = baseURL()
@@ -55,30 +70,42 @@ func Load() (*Config, error) {
 	c.ZohoRefreshToken = os.Getenv("ZOHO_REFRESH_TOKEN")
 	c.ZohoBaseURL = os.Getenv("ZOHO_BASE_URL")
 	c.ZohoAccountsURL = os.Getenv("ZOHO_ACCOUNTS_URL")
-	c.ZohoSyncEnabled, _ = strconv.ParseBool(os.Getenv("ZOHO_SYNC_ENABLED"))
+	c.ZohoSyncEnabled = boolVar("ZOHO_SYNC_ENABLED")
 
 	c.OIDCIssuerURL = os.Getenv("OIDC_ISSUER_URL")
 	c.OIDCDiscoveryURL = os.Getenv("OIDC_DISCOVERY_URL")
-	c.OIDCInsecureSkipIssuerValidation, _ = strconv.ParseBool(os.Getenv("OIDC_INSECURE_SKIP_ISSUER_VALIDATION"))
+	c.OIDCInsecureSkipIssuerValidation = boolVar("OIDC_INSECURE_SKIP_ISSUER_VALIDATION")
 	c.OIDCClientID = os.Getenv("OIDC_CLIENT_ID")
 	c.OIDCClientSecret = os.Getenv("OIDC_CLIENT_SECRET")
 	c.OIDCRedirectURL = os.Getenv("OIDC_REDIRECT_URL")
 	c.OIDCRequiredGroup = os.Getenv("OIDC_REQUIRED_GROUP")
 	c.SessionSecret = os.Getenv("SESSION_SECRET")
 
-	return c, c.validate()
+	return c, c.validate(errs)
 }
 
-func (c *Config) validate() error {
-	var errs []string
+// reports a required environment variable that is empty.
+type missingVarError string
+
+func (e missingVarError) Error() string { return string(e) + " is required" }
+
+// reports an environment variable that is not a valid boolean.
+type invalidBoolError string
+
+func (e invalidBoolError) Error() string { return string(e) + " is not a valid boolean" }
+
+var errSessionSecretTooShort = errors.New("SESSION_SECRET must be at least 32 bytes")
+
+// validate appends to the parse errors collected by Load.
+func (c *Config) validate(errs []error) error {
 	require := func(name, val string) {
 		if val == "" {
-			errs = append(errs, name+" is required")
+			errs = append(errs, missingVarError(name))
 		}
 	}
 
 	if u, err := url.Parse(c.BaseURL); err != nil || u.Host == "" {
-		errs = append(errs, "BBOOK_HOSTNAME is required")
+		errs = append(errs, missingVarError("BBOOK_HOSTNAME"))
 	}
 
 	require("POSTGRES_HOST", c.PostgresHost)
@@ -96,7 +123,7 @@ func (c *Config) validate() error {
 	}
 
 	if len(c.SessionSecret) < 32 {
-		errs = append(errs, fmt.Sprintf("SESSION_SECRET must be at least 32 bytes, got %d", len(c.SessionSecret)))
+		errs = append(errs, fmt.Errorf("%w, got %d", errSessionSecretTooShort, len(c.SessionSecret)))
 	}
 
 	// Zoho settings are only needed when the sync runs.
@@ -111,7 +138,7 @@ func (c *Config) validate() error {
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("loading config: %s", strings.Join(errs, "; "))
+		return fmt.Errorf("loading config: %w", errors.Join(errs...))
 	}
 	return nil
 }
