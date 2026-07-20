@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"path"
 	"strings"
@@ -31,6 +32,8 @@ const (
 )
 
 var errWebDavReadOnly = webdav.NewHTTPError(http.StatusForbidden, errors.New("bbook address book is read-only"))
+
+var errWebDavInternal = webdav.NewHTTPError(http.StatusInternalServerError, errors.New("internal error"))
 
 // CardDav HTTP handler.
 func Handler() http.Handler {
@@ -70,19 +73,21 @@ func (backend) GetAddressBook(_ context.Context, p string) (*gocarddav.AddressBo
 	return &ab, nil
 }
 
-func (backend) ListAddressObjects(_ context.Context, p string, _ *gocarddav.AddressDataRequest) ([]gocarddav.AddressObject, error) {
+func (backend) ListAddressObjects(ctx context.Context, p string, _ *gocarddav.AddressDataRequest) ([]gocarddav.AddressObject, error) {
 	if p != addressBookPath {
 		return nil, webdav.NewHTTPError(http.StatusNotFound, fmt.Errorf("listing address objects under %q: no such collection", p))
 	}
 	contacts, err := search.Search("")
 	if err != nil {
-		return nil, fmt.Errorf("listing address objects: %w", err)
+		slog.ErrorContext(ctx, "carddav: listing address objects", "err", err)
+		return nil, errWebDavInternal
 	}
 	objs := make([]gocarddav.AddressObject, 0, len(contacts))
 	for _, c := range contacts {
 		obj, err := toObject(c)
 		if err != nil {
-			return nil, fmt.Errorf("listing address objects: contact %s: %w", c.ID, err)
+			slog.ErrorContext(ctx, "carddav: encoding contact", "id", c.ID, "err", err)
+			return nil, errWebDavInternal
 		}
 		objs = append(objs, obj)
 	}
@@ -101,14 +106,15 @@ func (b backend) QueryAddressObjects(ctx context.Context, p string, query *gocar
 	return objs, nil
 }
 
-func (backend) GetAddressObject(_ context.Context, p string, _ *gocarddav.AddressDataRequest) (*gocarddav.AddressObject, error) {
+func (backend) GetAddressObject(ctx context.Context, p string, _ *gocarddav.AddressDataRequest) (*gocarddav.AddressObject, error) {
 	c, ok := search.ByID(idFromPath(p))
 	if !ok {
 		return nil, webdav.NewHTTPError(http.StatusNotFound, fmt.Errorf("getting address object %q: no such contact", p))
 	}
 	obj, err := toObject(c)
 	if err != nil {
-		return nil, fmt.Errorf("getting address object %q: %w", p, err)
+		slog.ErrorContext(ctx, "carddav: encoding contact", "id", c.ID, "err", err)
+		return nil, errWebDavInternal
 	}
 	return &obj, nil
 }

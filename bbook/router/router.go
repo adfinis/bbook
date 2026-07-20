@@ -158,7 +158,7 @@ func Router(cfg *config.Config) *mux.Router {
 		contacts, err := search.Search(q)
 		if err != nil {
 			slog.ErrorContext(r.Context(), "search failed", "query", q, "err", err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "invalid query", http.StatusBadRequest)
 			return
 		}
 
@@ -213,6 +213,7 @@ func Router(cfg *config.Config) *mux.Router {
 		if pageStr := r.URL.Query().Get("page"); pageStr != "" {
 			page, err := strconv.Atoi(pageStr)
 			if err != nil {
+				slog.WarnContext(r.Context(), "contacts: invalid page", "page", pageStr, "err", err)
 				http.Error(w, "invalid page", http.StatusBadRequest)
 				return
 			}
@@ -263,6 +264,7 @@ func Router(cfg *config.Config) *mux.Router {
 		sub := auth.CurrentUserSub(r)
 		id, err := uuid.Parse(mux.Vars(r)["id"])
 		if err != nil {
+			slog.WarnContext(r.Context(), "update integration: invalid id", "err", err)
 			http.Error(w, "invalid id", http.StatusBadRequest)
 			return
 		}
@@ -284,6 +286,7 @@ func Router(cfg *config.Config) *mux.Router {
 		sub := auth.CurrentUserSub(r)
 		id, err := uuid.Parse(mux.Vars(r)["id"])
 		if err != nil {
+			slog.WarnContext(r.Context(), "delete integration: invalid id", "err", err)
 			http.Error(w, "invalid id", http.StatusBadRequest)
 			return
 		}

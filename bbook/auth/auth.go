@@ -159,6 +159,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if time.Now().Unix() > flow.Exp {
+		slog.WarnContext(r.Context(), "login callback: flow expired")
 		http.Error(w, "login flow expired", http.StatusBadRequest)
 		return
 	}

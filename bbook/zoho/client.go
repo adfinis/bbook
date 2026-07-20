@@ -22,6 +22,19 @@ import (
 
 var ErrSyncDisabled = errors.New("zoho sync is disabled")
 
+var (
+	errNoNextPageToken  = errors.New("next_page_token shouldnt be empty")
+	errEmptyAccessToken = errors.New("empty access_token in response")
+)
+
+// unexpected HTTP err from a Zoho endpoint.
+type statusError struct {
+	status int
+	body   string
+}
+
+func (e *statusError) Error() string { return fmt.Sprintf("status %d: %s", e.status, e.body) }
+
 var client zohoHTTPClient = zohoHTTPClient{}
 
 type zohoHTTPClient struct {
@@ -115,7 +128,7 @@ func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
 			// We use page_token for retrieving any subsequent page after the first one
 			u += "&page_token=" + url.QueryEscape(prevPage.Info.NextPageToken)
 		} else {
-			return nil, fmt.Errorf("fetching zoho contacts page %d: next_page_token shouldnt be empty", pageNum)
+			return nil, fmt.Errorf("fetching zoho contacts page %d: %w", pageNum, errNoNextPageToken)
 		}
 		// fmt.Println(u)
 
@@ -137,7 +150,7 @@ func fetchContactsV8(ctx context.Context) (*[]rawZohoContact, error) {
 		// Any other issue
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
-			return nil, fmt.Errorf("fetching zoho contacts page %d: status %d: %s", pageNum, resp.StatusCode, strings.TrimSpace(string(body)))
+			return nil, fmt.Errorf("fetching zoho contacts page %d: %w", pageNum, &statusError{status: resp.StatusCode, body: strings.TrimSpace(string(body))})
 		}
 
 		var page rawContactsPage
@@ -305,10 +318,9 @@ func token(ctx context.Context) (string, error) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	// Refresh successful
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("refreshing zoho access token: status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		return "", fmt.Errorf("refreshing zoho access token: %w", &statusError{status: resp.StatusCode, body: strings.TrimSpace(string(body))})
 	}
 
 	var tr struct {
@@ -320,7 +332,7 @@ func token(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("refreshing zoho access token: decode response: %w", err)
 	}
 	if tr.AccessToken == "" {
-		return "", fmt.Errorf("refreshing zoho access token: empty access_token in response")
+		return "", fmt.Errorf("refreshing zoho access token: %w", errEmptyAccessToken)
 	}
 
 	client.accessToken = tr.AccessToken
