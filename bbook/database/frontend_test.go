@@ -9,6 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	testStreet = "Main St 1"
+	testCity   = "Zurich"
+	testFirst  = "Ada"
+	testLast   = "Lovelace"
+)
+
 func TestToViewComposesAddress(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -17,10 +24,10 @@ func TestToViewComposesAddress(t *testing.T) {
 		city    string
 		address string
 	}{
-		{"street zip city", "Main St 1", "8000", "Zurich", "Main St 1, 8000 Zurich"},
-		{"street only", "Main St 1", "", "", "Main St 1"},
-		{"street and city", "Main St 1", "", "Zurich", "Main St 1, Zurich"},
-		{"zip and city", "", "8000", "Zurich", "8000 Zurich"},
+		{"street zip city", testStreet, "8000", testCity, testStreet + ", 8000 " + testCity},
+		{"street only", testStreet, "", "", testStreet},
+		{"street and city", testStreet, "", testCity, testStreet + ", " + testCity},
+		{"zip and city", "", "8000", testCity, "8000 " + testCity},
 		{"all empty", "", "", "", ""},
 	}
 	for _, tc := range tests {
@@ -38,9 +45,9 @@ func TestToViewComposesFullName(t *testing.T) {
 		last     string
 		fullName string
 	}{
-		{"both names", "Ada", "Lovelace", "Ada Lovelace"},
-		{"first only", "Ada", "", "Ada"},
-		{"last only", "", "Lovelace", "Lovelace"},
+		{"both names", testFirst, testLast, testFirst + " " + testLast},
+		{"first only", testFirst, "", testFirst},
+		{"last only", "", testLast, testLast},
 		{"neither", "", "", ""},
 	}
 	for _, tc := range tests {
@@ -54,14 +61,14 @@ func TestToViewComposesFullName(t *testing.T) {
 func fullContact() Contact {
 	return Contact{
 		ZohoID:       "z123",
-		FirstName:    "Ada",
-		LastName:     "Lovelace",
+		FirstName:    testFirst,
+		LastName:     testLast,
 		Organization: "Adfinis",
 		Email:        "ada@example.com",
 		Phone:        "+41 44 000 00 00",
 		Mobile:       "+41 79 000 00 00",
-		Street:       "Main St 1",
-		City:         "Zurich",
+		Street:       testStreet,
+		City:         testCity,
 		PostalCode:   "8000",
 	}
 }
@@ -70,14 +77,14 @@ func TestToViewMapsFields(t *testing.T) {
 	v := fullContact().ToView()
 
 	assert.Equal(t, "z123", v.ID)
-	assert.Equal(t, "Ada", v.FirstName)
-	assert.Equal(t, "Lovelace", v.LastName)
+	assert.Equal(t, testFirst, v.FirstName)
+	assert.Equal(t, testLast, v.LastName)
 	assert.Equal(t, "Adfinis", v.Org)
 	assert.Equal(t, "ada@example.com", v.Email)
 	assert.Equal(t, "+41 44 000 00 00", v.Phone)
 	assert.Equal(t, "+41 79 000 00 00", v.Mobile)
-	assert.Equal(t, "Main St 1", v.Street)
-	assert.Equal(t, "Zurich", v.City)
+	assert.Equal(t, testStreet, v.Street)
+	assert.Equal(t, testCity, v.City)
 	assert.Equal(t, "8000", v.PostalCode)
 }
 
@@ -91,8 +98,8 @@ func TestVCardPopulatedFields(t *testing.T) {
 
 	name := card.Name()
 	require.NotNil(t, name)
-	assert.Equal(t, "Lovelace", name.FamilyName)
-	assert.Equal(t, "Ada", name.GivenName)
+	assert.Equal(t, testLast, name.FamilyName)
+	assert.Equal(t, testFirst, name.GivenName)
 
 	email := card.Get(vcard.FieldEmail)
 	require.NotNil(t, email)
@@ -108,8 +115,8 @@ func TestVCardPopulatedFields(t *testing.T) {
 
 	addr := card.Address()
 	require.NotNil(t, addr)
-	assert.Equal(t, "Main St 1", addr.StreetAddress)
-	assert.Equal(t, "Zurich", addr.Locality)
+	assert.Equal(t, testStreet, addr.StreetAddress)
+	assert.Equal(t, testCity, addr.Locality)
 	assert.Equal(t, "8000", addr.PostalCode)
 }
 

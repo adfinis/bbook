@@ -7,12 +7,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	schemeHTTP  = "http"
+	schemeHTTPS = "https"
+	testBaseURL = "https://bbook.example.com"
+)
+
+// zohoEnvVars are only required when the sync is enabled.
+var zohoEnvVars = []string{
+	"ZOHO_CLIENT_ID", "ZOHO_CLIENT_SECRET", "ZOHO_REFRESH_TOKEN",
+	"ZOHO_BASE_URL", "ZOHO_ACCOUNTS_URL",
+}
+
 func setValidEnv(t *testing.T) {
 	t.Helper()
 	for k, v := range map[string]string{
 		"LOG_FORMAT":                           "json",
 		"LOG_LEVEL":                            "debug",
-		"BBOOK_SCHEME":                         "https",
+		"BBOOK_SCHEME":                         schemeHTTPS,
 		"BBOOK_HOSTNAME":                       "bbook.example.com",
 		"BBOOK_PORT":                           "",
 		"POSTGRES_HOST":                        "db.example.com",
@@ -43,10 +55,11 @@ func TestLoadValidEnv(t *testing.T) {
 	setValidEnv(t)
 	c, err := Load()
 	require.NoError(t, err)
+	//nolint:gosec // G101: fixture values, not real credentials
 	assert.Equal(t, &Config{
 		LogFormat:                        "json",
 		LogLevel:                         "debug",
-		BaseURL:                          "https://bbook.example.com",
+		BaseURL:                          testBaseURL,
 		PostgresHost:                     "db.example.com",
 		PostgresUser:                     "bbook-user",
 		PostgresPassword:                 "hunter2",
@@ -103,10 +116,7 @@ func TestLoadRejectsShortSessionSecret(t *testing.T) {
 }
 
 func TestLoadRequiresZohoVarsWhenSyncEnabled(t *testing.T) {
-	for _, name := range []string{
-		"ZOHO_CLIENT_ID", "ZOHO_CLIENT_SECRET", "ZOHO_REFRESH_TOKEN",
-		"ZOHO_BASE_URL", "ZOHO_ACCOUNTS_URL",
-	} {
+	for _, name := range zohoEnvVars {
 		t.Run(name, func(t *testing.T) {
 			setValidEnv(t)
 			t.Setenv("ZOHO_SYNC_ENABLED", "true")
@@ -120,10 +130,7 @@ func TestLoadRequiresZohoVarsWhenSyncEnabled(t *testing.T) {
 func TestLoadAllowsEmptyZohoVarsWhenSyncDisabled(t *testing.T) {
 	setValidEnv(t)
 	t.Setenv("ZOHO_SYNC_ENABLED", "false")
-	for _, name := range []string{
-		"ZOHO_CLIENT_ID", "ZOHO_CLIENT_SECRET", "ZOHO_REFRESH_TOKEN",
-		"ZOHO_BASE_URL", "ZOHO_ACCOUNTS_URL",
-	} {
+	for _, name := range zohoEnvVars {
 		t.Setenv(name, "")
 	}
 	c, err := Load()
@@ -138,11 +145,11 @@ func TestBaseURLPortElision(t *testing.T) {
 		port   string
 		want   string
 	}{
-		{"https default port elided", "https", "443", "https://bbook.example.com"},
-		{"http default port elided", "http", "80", "http://bbook.example.com"},
-		{"https custom port kept", "https", "8443", "https://bbook.example.com:8443"},
-		{"http with 443 kept", "http", "443", "http://bbook.example.com:443"},
-		{"empty port omitted", "https", "", "https://bbook.example.com"},
+		{"https default port elided", schemeHTTPS, "443", testBaseURL},
+		{"http default port elided", schemeHTTP, "80", "http://bbook.example.com"},
+		{"https custom port kept", schemeHTTPS, "8443", testBaseURL + ":8443"},
+		{"http with 443 kept", schemeHTTP, "443", "http://bbook.example.com:443"},
+		{"empty port omitted", schemeHTTPS, "", testBaseURL},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

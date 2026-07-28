@@ -192,7 +192,7 @@ func TestToObjectETagTracksContent(t *testing.T) {
 func TestHandlerRejectsPutOverHTTP(t *testing.T) {
 	seed(t, []database.Contact{testContact("7")})
 
-	req := httptest.NewRequest(http.MethodPut, addressBookPath+"7.vcf", strings.NewReader("BEGIN:VCARD\r\nVERSION:3.0\r\nUID:bbook-7\r\nEND:VCARD\r\n"))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPut, addressBookPath+"7.vcf", strings.NewReader("BEGIN:VCARD\r\nVERSION:3.0\r\nUID:bbook-7\r\nEND:VCARD\r\n"))
 	req.Header.Set("Content-Type", vcard.MIMEType)
 	rec := httptest.NewRecorder()
 	Handler().ServeHTTP(rec, req)
@@ -203,7 +203,7 @@ func TestHandlerRejectsPutOverHTTP(t *testing.T) {
 func TestHandlerAdvertisesAddressBookSupport(t *testing.T) {
 	seed(t, []database.Contact{testContact("7")})
 
-	req := httptest.NewRequest(http.MethodOptions, addressBookPath, nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodOptions, addressBookPath, nil)
 	rec := httptest.NewRecorder()
 	Handler().ServeHTTP(rec, req)
 
@@ -214,7 +214,7 @@ func TestHandlerAdvertisesAddressBookSupport(t *testing.T) {
 func TestHandlerServesPropfindOnAddressBook(t *testing.T) {
 	seed(t, []database.Contact{testContact("7")})
 
-	req := httptest.NewRequest("PROPFIND", addressBookPath, nil)
+	req := httptest.NewRequestWithContext(t.Context(), "PROPFIND", addressBookPath, nil)
 	req.Header.Set("Depth", "1")
 	rec := httptest.NewRecorder()
 	Handler().ServeHTTP(rec, req)

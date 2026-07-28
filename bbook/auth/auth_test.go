@@ -18,6 +18,7 @@ const (
 	testSub     = "alice"
 	signPayload = `{"sub":"alice"}`
 	anonURI     = "/books?page=2&q=go"
+	testGroup   = "admins"
 )
 
 func TestSignVerifyRoundTrip(t *testing.T) {
@@ -62,11 +63,11 @@ func TestInGroup(t *testing.T) {
 		want   string
 		expect bool
 	}{
-		{"exact match", []string{"users", "admins"}, "admins", true},
-		{"leading slash on group", []string{"/admins"}, "admins", true},
-		{"leading slash on want", []string{"admins"}, "/admins", true},
-		{"non-membership", []string{"users"}, "admins", false},
-		{"empty groups", nil, "admins", false},
+		{"exact match", []string{"users", testGroup}, testGroup, true},
+		{"leading slash on group", []string{"/" + testGroup}, testGroup, true},
+		{"leading slash on want", []string{testGroup}, "/" + testGroup, true},
+		{"non-membership", []string{"users"}, testGroup, false},
+		{"empty groups", nil, testGroup, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -80,7 +81,7 @@ func requestWithSessionCookie(t *testing.T, target string, s sessionClaims) *htt
 	t.Helper()
 	rec := httptest.NewRecorder()
 	require.NoError(t, setSignedCookie(rec, sessionCookieName, s, sessionTTL))
-	req := httptest.NewRequest(http.MethodGet, target, nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, target, nil)
 	req.AddCookie(rec.Result().Cookies()[0])
 	return req
 }
@@ -101,7 +102,7 @@ func TestSignedCookieRoundTrip(t *testing.T) {
 	assert.Equal(t, "/", c.Path)
 	assert.Equal(t, int(sessionTTL.Seconds()), c.MaxAge)
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	req.AddCookie(c)
 	var out sessionClaims
 	require.NoError(t, readSignedCookie(req, sessionCookieName, &out))
@@ -119,7 +120,8 @@ func TestCurrentUserSub(t *testing.T) {
 		assert.Empty(t, CurrentUserSub(req))
 	})
 	t.Run("garbage cookie", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+		//nolint:gosec // G124: attributes are meaningless on a request cookie
 		req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "garbage"})
 		assert.Empty(t, CurrentUserSub(req))
 	})
@@ -144,7 +146,7 @@ func TestMiddlewareRedirectsAnonymousToLogin(t *testing.T) {
 	h := Middleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		t.Error("next handler must not be reached")
 	}))
-	req := httptest.NewRequest(http.MethodGet, anonURI, nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, anonURI, nil)
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusFound, rec.Code)
@@ -157,7 +159,7 @@ func TestMiddlewareHTMXRedirectHeader(t *testing.T) {
 	h := Middleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		t.Error("next handler must not be reached")
 	}))
-	req := httptest.NewRequest(http.MethodGet, anonURI, nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, anonURI, nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
@@ -188,7 +190,7 @@ func TestLoginHandlerRejectsBadReturnTo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/auth/login?return_to="+url.QueryEscape(tt.returnTo), nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/auth/login?return_to="+url.QueryEscape(tt.returnTo), nil)
 			rec := httptest.NewRecorder()
 			LoginHandler(rec, req)
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -199,7 +201,7 @@ func TestLoginHandlerRejectsBadReturnTo(t *testing.T) {
 func TestLoginHandlerRedirectsToIdP(t *testing.T) {
 	setTestSecret(t, testSecret)
 	setTestOAuthCfg(t)
-	req := httptest.NewRequest(http.MethodGet, "/auth/login?return_to="+url.QueryEscape("/path?x=1"), nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/auth/login?return_to="+url.QueryEscape("/path?x=1"), nil)
 	rec := httptest.NewRecorder()
 	LoginHandler(rec, req)
 	require.Equal(t, http.StatusFound, rec.Code)
@@ -218,7 +220,7 @@ func TestLoginHandlerRedirectsToIdP(t *testing.T) {
 	cookies := rec.Result().Cookies()
 	require.Len(t, cookies, 1)
 	require.Equal(t, flowCookieName, cookies[0].Name)
-	cookieReq := httptest.NewRequest(http.MethodGet, "/", nil)
+	cookieReq := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	cookieReq.AddCookie(cookies[0])
 	var flow flowClaims
 	require.NoError(t, readSignedCookie(cookieReq, flowCookieName, &flow))
@@ -240,13 +242,13 @@ func flowCookie(t *testing.T, flow flowClaims) *http.Cookie {
 func TestCallbackHandlerRejectsMissingFlowCookie(t *testing.T) {
 	setTestSecret(t, testSecret)
 	rec := httptest.NewRecorder()
-	CallbackHandler(rec, httptest.NewRequest(http.MethodGet, "/auth/callback?state=x&code=y", nil))
+	CallbackHandler(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/auth/callback?state=x&code=y", nil))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
 func TestCallbackHandlerRejectsExpiredFlow(t *testing.T) {
 	setTestSecret(t, testSecret)
-	req := httptest.NewRequest(http.MethodGet, "/auth/callback?state=x&code=y", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/auth/callback?state=x&code=y", nil)
 	req.AddCookie(flowCookie(t, flowClaims{State: "x", Exp: time.Now().Add(-time.Minute).Unix()}))
 	rec := httptest.NewRecorder()
 	CallbackHandler(rec, req)
@@ -255,7 +257,7 @@ func TestCallbackHandlerRejectsExpiredFlow(t *testing.T) {
 
 func TestCallbackHandlerRejectsStateMismatch(t *testing.T) {
 	setTestSecret(t, testSecret)
-	req := httptest.NewRequest(http.MethodGet, "/auth/callback?state=wrong&code=y", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/auth/callback?state=wrong&code=y", nil)
 	req.AddCookie(flowCookie(t, flowClaims{State: "right", Exp: time.Now().Add(time.Minute).Unix()}))
 	rec := httptest.NewRecorder()
 	CallbackHandler(rec, req)
