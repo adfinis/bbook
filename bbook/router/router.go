@@ -391,7 +391,6 @@ func loggingMiddleware(next http.Handler) http.Handler {
 			"path", r.URL.Path,
 			"status", rec.status,
 			"dur_ms", time.Since(start).Milliseconds(),
-			"ip", clientIP(r),
 		)
 	})
 }

@@ -1,5 +1,5 @@
 tmp
 node_modules
-static/tailwind.css
-static/htmx.js
-static/qrcode.js
+static/assets/tailwind.css
+static/assets/htmx.js
+static/assets/qrcode.js
