@@ -1,0 +1,42 @@
+---
+version: "2"
+
+linters:
+  settings:
+    gosec:
+      # G104 (unhandled errors) make errcheck the only linter for this error
+      excludes:
+        - G104
+  enable:
+    - asasalint
+    - bidichk
+    - bodyclose
+    - dupl
+    - errcheck
+    - errname
+    - exhaustive
+    - gosec
+    - misspell
+    - noctx
+    - rowserrcheck
+    - sqlclosecheck
+    - goconst
+    - godot
+    - gomoddirectives
+    - goprintffuncname
+    - nakedret
+    - nilerr
+    - nolintlint
+    - prealloc
+    - tparallel
+    - unconvert
+    - unparam
+    - whitespace
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+

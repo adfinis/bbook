@@ -1,0 +1,5 @@
+tmp
+node_modules
+static/assets/tailwind.css
+static/assets/htmx.js
+static/assets/qrcode.js

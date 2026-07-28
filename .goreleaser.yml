@@ -1,0 +1,74 @@
+version: 2
+
+project_name: bbook
+
+before:
+  hooks:
+    - sh -c "cd bbook && npm ci && npm run build"
+
+builds:
+  - id: bbook
+    dir: bbook
+    main: .
+    binary: bbook
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+    goos:
+      - linux
+    goarch:
+      - amd64
+
+archives:
+  - id: bbook
+    ids:
+      - bbook
+    formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+# CycloneDX SBOM by Syft
+sboms:
+  - id: archive
+    artifacts: archive
+    documents:
+      - "${artifact}.cyclonedx.json"
+    args:
+      - "$artifact"
+      - "--output"
+      - "cyclonedx-json=$document"
+
+dockers:
+  - id: bbook
+    ids:
+      - bbook
+    goos: linux
+    goarch: amd64
+    dockerfile: Dockerfile
+    image_templates:
+      - "{{ .Env.CI_REGISTRY_IMAGE }}:{{ .Version }}"
+      - "{{ .Env.CI_REGISTRY_IMAGE }}:latest"
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.source={{ .Env.CI_PROJECT_URL }}"
+
+# keep existing release and just attach artifacts
+release:
+  mode: keep-existing
+  gitlab:
+    owner: "{{ .Env.CI_PROJECT_NAMESPACE }}"
+    name: "{{ .Env.CI_PROJECT_NAME }}"
+changelog:
+  disable: true
+
+gitlab_urls:
+  api: "{{ .Env.CI_API_V4_URL }}"
+  download: "{{ .Env.CI_SERVER_URL }}"
+  use_package_registry: true
+  use_job_token: true

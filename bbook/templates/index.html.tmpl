@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>bbook</title>
+        <!--Restore theme -->
+        <script>
+            (function () {
+                try {
+                    const stored = localStorage.getItem("bbook.theme");
+                    const dark = stored
+                        ? stored === "dark"
+                        : window.matchMedia("(prefers-color-scheme: dark)")
+                              .matches;
+                    document.documentElement.classList.toggle("dark", dark);
+                } catch {}
+            })();
+        </script>
+        <link rel="icon" type="image/png" href="/static/adfinis-favicon.png" />
+        <link rel="stylesheet" href="/static/tailwind.css" />
+        <script src="/static/htmx.js"></script>
+        <script src="/static/qrcode.js"></script>
+        <script>
+            const FAV_KEY = "bbook.favourites";
+
+            function loadFavourites() {
+                try {
+                    return JSON.parse(localStorage.getItem(FAV_KEY)) || [];
+                } catch {
+                    return [];
+                }
+            }
+
+            function saveFavourites(favs) {
+                localStorage.setItem(FAV_KEY, JSON.stringify(favs));
+            }
+
+            function renderFavourites() {
+                // Returns the HTML for a single favourite chip.
+                function renderFavouriteChip(q) {
+                    const url = "/?q=" + encodeURIComponent(q);
+                    return `
+  <a href="${esc(url)}"
+     class="group/fav inline-flex items-center gap-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded px-2 py-0.5 hover:border-brand-sapphire">
+      <span class="font-mono">${esc(q)}</span>
+      <button type="button"
+              aria-label="Remove favourite"
+              data-q="${esc(q)}"
+              onclick="event.preventDefault(); event.stopPropagation(); removeFavourite(this.dataset.q)"
+              class="text-neutral-400 hover:text-red-600 leading-none"
+          >&times;</button>
+  </a>`;
+                }
+
+                const favs = loadFavourites();
+                const container = document.querySelector("#favourites");
+                if (favs.length === 0) {
+                    container.classList.add("hidden");
+                    return;
+                }
+                // Keep the "Favourites:" label, replace the rest
+                container
+                    .querySelectorAll(":scope > *:not(:first-child)")
+                    .forEach((el) => el.remove());
+                container.insertAdjacentHTML(
+                    "beforeend",
+                    favs.map(renderFavouriteChip).join(""),
+                );
+                htmx.process(container);
+                container.classList.remove("hidden");
+            }
+
+            function addCurrentFavourite() {
+                const input = document.querySelector('input[name="q"]');
+                const q = input.value.trim();
+                if (!q) return;
+                const favs = loadFavourites();
+                if (favs.includes(q)) return;
+                favs.push(q);
+                saveFavourites(favs);
+                renderFavourites();
+            }
+
+            function removeFavourite(q) {
+                saveFavourites(loadFavourites().filter((f) => f !== q));
+                renderFavourites();
+            }
+
+            function toggleTheme() {
+                const dark = document.documentElement.classList.toggle("dark");
+                localStorage.setItem("bbook.theme", dark ? "dark" : "light");
+                syncThemeIcon(dark);
+            }
+
+            function syncThemeIcon(dark) {
+                const sun = document.getElementById("theme-icon-sun");
+                const moon = document.getElementById("theme-icon-moon");
+                if (!sun || !moon) return;
+                sun.classList.toggle("hidden", !dark);
+                moon.classList.toggle("hidden", dark);
+            }
+
+            // Sets the active URL. Makes sure the input and the URL are synced, then triggers an htmx event for fetching the results.
+            function setQuery(q) {
+                const input = document.querySelector('input[name="q"]');
+                input.value = q;
+                history.pushState(
+                    null,
+                    "",
+                    q ? "/?q=" + encodeURIComponent(q) : "/",
+                );
+                input.dispatchEvent(new Event("search", { bubbles: true }));
+            }
+
+            // Intercept clicks on the header logo such that we clear the query rather than doing a full page refresh.
+            document.addEventListener("click", (e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0)
+                    return;
+
+                const link = e.target.closest("a[href]");
+                if (!link) return;
+                const url = new URL(link.href);
+                if (url.origin !== location.origin || url.pathname !== "/")
+                    return;
+                e.preventDefault();
+                setQuery(url.searchParams.get("q") || "");
+            });
+
+            // Keep the URL in sync with the search input as the user types
+            document.addEventListener("input", (e) => {
+                if (e.target.name !== "q") return;
+                const q = e.target.value;
+                history.replaceState(
+                    null,
+                    "",
+                    q ? "/?q=" + encodeURIComponent(q) : "/",
+                );
+            });
+
+            // Apply query when the URL changes.
+            window.addEventListener("popstate", () => {
+                const q =
+                    new URL(window.location.href).searchParams.get("q") || "";
+                setQuery(q);
+            });
+
+            // Download all search results as csv or vcf
+            function downloadAll(format) {
+                const q = document.querySelector('input[name="q"]').value;
+                const params = new URLSearchParams({ format });
+                if (q) params.set("q", q);
+                window.location.assign("/contacts?" + params);
+            }
+
+            // QR tooltip
+            let qrTooltip = null;
+            let qrHoveredBtn = null;
+            function getQRTooltip() {
+                if (!qrTooltip) {
+                    qrTooltip = document.createElement("div");
+                    qrTooltip.id = "qr-tooltip";
+                    qrTooltip.className =
+                        "fixed hidden bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-lg p-2 z-50";
+                    document.body.appendChild(qrTooltip);
+                }
+                return qrTooltip;
+            }
+
+            // Show QR for the contact's vCard while hovering its export button.
+            document.addEventListener("mouseover", (e) => {
+                if (e.target.closest("#qr-tooltip")) return;
+                const btn = e.target.closest("[data-vcard]");
+                if (btn === qrHoveredBtn) return;
+                qrHoveredBtn = btn;
+                const tooltip = getQRTooltip();
+                if (!btn) {
+                    tooltip.classList.add("hidden");
+                    return;
+                }
+
+                const utf8 = new TextEncoder().encode(btn.dataset.vcard);
+                const qr = qrcode(0, "L");
+                qr.addData(String.fromCharCode(...utf8), "Byte");
+                qr.make();
+                // Set content of the tooltip
+                tooltip.innerHTML = `
+                    ${qr.createImgTag(4, 8)}
+                    <div class="text-center text-[10px] text-neutral-500 mt-1">Click to download contact</div>
+                    <div class="text-center text-[10px] text-neutral-400 font-mono mt-0.5">ID: ${esc(btn.dataset.id)}</div>
+                `;
+                const rect = btn.getBoundingClientRect();
+                const size = 180;
+                tooltip.style.left = `${rect.right}px`;
+                tooltip.style.top = `${Math.max(8, rect.top - size / 2)}px`;
+                tooltip.classList.remove("hidden");
+            });
+
+            // Download the contact as a .vcf file.
+            document.addEventListener("click", (e) => {
+                const btn = e.target.closest("[data-id]");
+                if (!btn) return;
+                const q = `id:${btn.dataset.id}`;
+                window.location.assign(
+                    `/contacts?q=${encodeURIComponent(q)}&format=vcf`,
+                );
+            });
+
+            // HTML-escape a value used inside text content or an attribute.
+            // (Used by renderFavouriteChip for the localStorage-driven chips.)
+            function esc(s) {
+                return String(s ?? "").replace(
+                    /[&<>"]/g,
+                    (c) =>
+                        ({
+                            "&": "&amp;",
+                            "<": "&lt;",
+                            ">": "&gt;",
+                            '"': "&quot;",
+                        })[c],
+                );
+            }
+        </script>
+    </head>
+    <body
+        class="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100"
+    >
+        <header
+            class="bg-brand-stone w-full text-white px-3 py-2.5 flex flex-wrap items-center gap-3 shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_1px_2px_0_rgba(0,0,0,0.15)]"
+        >
+            <a
+                href="/"
+                class="flex items-center gap-2 hover:opacity-80"
+                id="headerlogo"
+            >
+                <img
+                    src="/static/adfinis-emblem.png"
+                    alt="Adfinis"
+                    class="h-4 w-auto"
+                />
+                <span class="hidden md:inline font-medium">bbook</span>
+            </a>
+            <div class="flex-1 min-w-[12rem] max-w-md relative">
+                <input
+                    name="q"
+                    type="search"
+                    placeholder="search..."
+                    value="{{ .Query }}"
+                    autocomplete="off"
+                    autofocus
+                    class="peer w-full bg-brand-anthracite text-white placeholder-neutral-400 border border-brand-anthracite rounded pl-2 pr-7 py-0.5 text-sm focus:outline-none focus:border-brand-sapphire [&::-webkit-search-cancel-button]:appearance-none"
+                    hx-get="/contacts"
+                    hx-trigger="input changed, search"
+                    hx-target="#contacts-rows"
+                    hx-swap="innerHTML"
+                />
+                <a
+                    href="/"
+                    aria-label="Clear search"
+                    class="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex items-center text-neutral-400 hover:text-white peer-placeholder-shown:hidden"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </a>
+            </div>
+
+            <div class="flex gap-4 items-center">
+                <!-- Save current query as favourite -->
+                <button
+                    type="button"
+                    aria-label="Save query as favourite"
+                    onclick="addCurrentFavourite()"
+                    class="btn-header hover:text-brand-sunglow"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <polygon
+                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                        />
+                    </svg>
+                </button>
+
+                <!-- Export dropdown (CSV / vCard) -->
+                <div class="group relative inline-flex items-center">
+                    <button
+                        type="button"
+                        aria-label="Export results"
+                        class="btn-header hover:text-white"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path
+                                d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                            />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                    </button>
+                    <div
+                        class="hidden group-hover:block group-focus-within:block absolute right-0 top-full pt-2 z-50"
+                    >
+                        <div
+                            class="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 text-xs shadow-lg rounded border border-neutral-200 dark:border-neutral-700 py-1 min-w-[10rem]"
+                        >
+                            <button
+                                type="button"
+                                hx-on:click="downloadAll('csv')"
+                                class="block w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+                            >
+                                Download as CSV
+                            </button>
+                            <button
+                                type="button"
+                                hx-on:click="downloadAll('vcf')"
+                                class="block w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+                            >
+                                Download as vCard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Query help tooltip -->
+                <div class="group relative inline-flex items-center">
+                    <button
+                        type="button"
+                        aria-label="Search syntax help"
+                        class="btn-header hover:text-white"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 16v-4" />
+                            <path d="M12 8h.01" />
+                        </svg>
+                    </button>
+                    <div
+                        class="hidden group-hover:block group-focus-within:block absolute md:right-0 top-full pt-2 w-80 z-50"
+                    >
+                        <div
+                            class="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 text-xs shadow-lg rounded border border-neutral-200 dark:border-neutral-700 p-3"
+                        >
+                            <div
+                                class="font-medium text-sm mb-2 text-brand-stone dark:text-neutral-100"
+                            >
+                                Search syntax
+                            </div>
+                            Search uses the
+                            <a
+                                href="https://github.com/mcandre/cheatsheets/blob/main/lucene.md#basic-queries"
+                                target="_blank"
+                                rel="noopener"
+                                class="text-brand-sapphire underline"
+                            >
+                                Lucene query syntax</a
+                            ><br />
+                            Examples:
+                            <dl
+                                class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 mt-1 items-baseline [&>dt]:font-mono [&>dt]:text-brand-sapphire [&>dd]:text-neutral-600 dark:[&>dd]:text-neutral-400"
+                            >
+                                <dt>lunkwill</dt>
+                                <dd>exact term match in any field</dd>
+
+                                <dt>lunk*</dt>
+                                <dd>wildcard</dd>
+
+                                <dt>org:adfinis</dt>
+                                <dd>specific field</dd>
+
+                                <dt>+a +b</dt>
+                                <dd>both required</dd>
+
+                                <dt>a AND b</dt>
+                                <dd>same as above</dd>
+
+                                <dt>a OR b</dt>
+                                <dd>either term</dd>
+
+                                <dt>-Microslop</dt>
+                                <dd>exclude term</dd>
+
+                                <dt>"exact phrase"</dt>
+                                <dd>phrase match</dd>
+                            </dl>
+                            <div
+                                class="mt-2 pt-2 border-t border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400"
+                            >
+                                Fields:&nbsp;{{- range $i, $f := .FieldNames -}}
+                                {{- if $i }}, {{ end -}}
+                                <span class="font-mono text-brand-sapphire"
+                                    >{{ $f }}</span
+                                >
+                                {{- end -}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <span class="text-xs text-neutral-400"
+                    >{{ .TotalRows }} contacts</span
+                >
+            </div>
+
+            <div class="flex gap-4 items-center ml-auto">
+                <!-- Mail client integrations -->
+                <div class="group relative inline-flex items-center">
+                    <button
+                        type="button"
+                        aria-label="Mail client integrations"
+                        class="btn-header hover:text-white"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <rect x="2" y="4" width="20" height="16" rx="2" />
+                            <path d="m22 7-10 6L2 7" />
+                        </svg>
+                    </button>
+                    <div
+                        class="hidden group-hover:block group-focus-within:block absolute right-0 top-full pt-2 w-96 z-50"
+                    >
+                        <div
+                            class="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 text-xs shadow-lg rounded border border-neutral-200 dark:border-neutral-700 p-3"
+                        >
+                            <div
+                                class="font-medium text-sm mb-2 text-brand-stone dark:text-neutral-100"
+                            >
+                                Mail client integrations
+                            </div>
+                            <div
+                                class="text-neutral-600 dark:text-neutral-400 mb-2"
+                            >
+                                Connect your CardDav-capable email client to automatically pull customer contacts
+                            </div>
+                            <div
+                                hx-get="/api/dav"
+                                hx-trigger="load"
+                                hx-swap="outerHTML"
+                            >
+                                Loading...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Theme toggle-->
+                <button
+                    type="button"
+                    aria-label="Toggle dark mode"
+                    onclick="toggleTheme()"
+                    class="btn-header hover:text-white"
+                >
+                    <!-- Moon -->
+                    <svg
+                        id="theme-icon-moon"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+                    </svg>
+                    <!-- Sun -->
+                    <svg
+                        id="theme-icon-sun"
+                        class="hidden"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <circle cx="12" cy="12" r="4" />
+                        <path d="M12 2v2" />
+                        <path d="M12 20v2" />
+                        <path d="m4.93 4.93 1.41 1.41" />
+                        <path d="m17.66 17.66 1.41 1.41" />
+                        <path d="M2 12h2" />
+                        <path d="M20 12h2" />
+                        <path d="m6.34 17.66-1.41 1.41" />
+                        <path d="m19.07 4.93-1.41 1.41" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Favourite queries -->
+        <div
+            id="favourites"
+            class="hidden flex flex-wrap items-center gap-1.5 px-3 py-1.5 bg-brand-neutral dark:bg-neutral-800 text-xs border-b border-neutral-200 dark:border-neutral-700"
+        >
+            <span class="text-neutral-500 mr-1"> Favourites: </span>
+        </div>
+
+        <script>
+            renderFavourites();
+            syncThemeIcon(document.documentElement.classList.contains("dark"));
+        </script>
+
+        <div class="flex flex-col md:flex-row">
+            <!-- A–Z sidebar -->
+            <nav
+                aria-label="Jump to letter"
+                class="w-full md:w-7 bg-brand-neutral dark:bg-neutral-800 border-b md:border-b-0 md:border-r border-neutral-200 dark:border-neutral-700 text-[10px] font-medium text-neutral-500 select-none [&_button]:cursor-pointer [&_button]:hover:text-brand-sapphire [&_button]:py-2 md:[&_button]:py-0.5 [&_button]:flex-1 md:[&_button]:flex-none"
+            >
+                <div
+                    class="md:sticky md:top-0 flex md:flex-col items-stretch md:py-2 justify-around md:justify-start"
+                >
+                    <button hx-on:click="setQuery('lastname:a*')">A</button>
+                    <button hx-on:click="setQuery('lastname:b*')">B</button>
+                    <button hx-on:click="setQuery('lastname:c*')">C</button>
+                    <button hx-on:click="setQuery('lastname:d*')">D</button>
+                    <button hx-on:click="setQuery('lastname:e*')">E</button>
+                    <button hx-on:click="setQuery('lastname:f*')">F</button>
+                    <button hx-on:click="setQuery('lastname:g*')">G</button>
+                    <button hx-on:click="setQuery('lastname:h*')">H</button>
+                    <button hx-on:click="setQuery('lastname:i*')">I</button>
+                    <button hx-on:click="setQuery('lastname:j*')">J</button>
+                    <button hx-on:click="setQuery('lastname:k*')">K</button>
+                    <button hx-on:click="setQuery('lastname:l*')">L</button>
+                    <button hx-on:click="setQuery('lastname:m*')">M</button>
+                    <button hx-on:click="setQuery('lastname:n*')">N</button>
+                    <button hx-on:click="setQuery('lastname:o*')">O</button>
+                    <button hx-on:click="setQuery('lastname:p*')">P</button>
+                    <button hx-on:click="setQuery('lastname:q*')">Q</button>
+                    <button hx-on:click="setQuery('lastname:r*')">R</button>
+                    <button hx-on:click="setQuery('lastname:s*')">S</button>
+                    <button hx-on:click="setQuery('lastname:t*')">T</button>
+                    <button hx-on:click="setQuery('lastname:u*')">U</button>
+                    <button hx-on:click="setQuery('lastname:v*')">V</button>
+                    <button hx-on:click="setQuery('lastname:w*')">W</button>
+                    <button hx-on:click="setQuery('lastname:x*')">X</button>
+                    <button hx-on:click="setQuery('lastname:y*')">Y</button>
+                    <button hx-on:click="setQuery('lastname:z*')">Z</button>
+                </div>
+            </nav>
+
+            <!--Search results-->
+            <div
+                id="results"
+                class="self-start w-full min-w-0 overflow-x-auto lg:overflow-x-visible text-xs [--cols:1.25rem_11rem_14rem_16rem_12rem_25rem] lg:[--cols:1.25rem_repeat(5,1fr)] [--row-h:29px] [scrollbar-width:thin] [scrollbar-color:#a3a3a3_transparent] dark:[scrollbar-color:#525252_transparent]"
+            >
+                <div
+                    class="grid grid-cols-[var(--cols)] min-w-max lg:min-w-0 sticky top-0 bg-white dark:bg-neutral-900 z-10 text-[10px] uppercase tracking-wider text-brand-anthracite dark:text-neutral-400 border-b border-neutral-300 dark:border-neutral-700 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.04)] [&>*]:py-2 [&>*:not(:first-child)]:px-3 [&>*]:font-semibold"
+                >
+                    <div></div>
+                    <div class="sticky left-0 lg:static">Name</div>
+                    <div>Org</div>
+                    <div>Email</div>
+                    <div>Phone</div>
+                    <div>Address</div>
+                </div>
+                <div id="contacts-rows">
+                    {{ template "rows.html.tmpl" .Rows }}
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

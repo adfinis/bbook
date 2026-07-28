@@ -1,0 +1,149 @@
+{{- /* Renders the body of the mail-client-integrations dropdown */ -}}
+<div id="integrations-list" class="flex flex-col gap-2">
+    <!-- Shared CardDAV server URL + how to authenticate -->
+    <div class="flex flex-col gap-1">
+        <div class="flex items-center gap-1.5">
+            <span class="shrink-0 text-neutral-500 dark:text-neutral-400">URL</span>
+            <code
+                class="flex-1 truncate font-mono text-[11px] text-neutral-600 dark:text-neutral-400"
+                title="{{ .DavURL }}"
+                >{{ .DavURL }}</code
+            >
+            <button
+                type="button"
+                aria-label="Copy server URL"
+                data-copy="{{ .DavURL }}"
+                hx-on:click="navigator.clipboard.writeText(this.dataset.copy)"
+                class="text-neutral-400 hover:text-brand-sapphire cursor-pointer"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path
+                        d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                    />
+                </svg>
+            </button>
+        </div>
+        <div class="text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
+            Sign in with any username and your token as the password.
+        </div>
+    </div>
+
+    {{ if .New.ID }}
+    <!-- Freshly created integration -->
+    <div
+        class="flex flex-col gap-1.5 border border-brand-sapphire rounded px-2 py-1"
+    >
+        <div class="flex items-center gap-1.5">
+            <input
+                type="text"
+                name="name"
+                placeholder="Label"
+                aria-label="Integration label"
+                hx-patch="/api/dav/{{ .New.ID }}"
+                hx-trigger="change"
+                hx-swap="none"
+                class="flex-1 bg-transparent border-b border-transparent focus:border-brand-sapphire outline-none text-brand-stone dark:text-neutral-200 placeholder-neutral-400"
+            />
+            <button
+                type="button"
+                aria-label="Remove integration"
+                hx-delete="/api/dav/{{ .New.ID }}"
+                hx-target="#integrations-list"
+                hx-swap="outerHTML"
+                hx-confirm="Remove this mail client integration?"
+                class="text-neutral-400 hover:text-red-600 cursor-pointer leading-none"
+            >
+                &times;
+            </button>
+        </div>
+        <div class="flex items-center gap-1.5">
+            <code
+                class="flex-1 truncate font-mono text-[11px] text-brand-stone dark:text-neutral-200"
+                title="{{ .New.Token }}"
+                >{{ .New.Token }}</code
+            >
+            <button
+                type="button"
+                aria-label="Copy token"
+                data-copy="{{ .New.Token }}"
+                hx-on:click="navigator.clipboard.writeText(this.dataset.copy)"
+                class="text-neutral-400 hover:text-brand-sapphire cursor-pointer"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path
+                        d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                    />
+                </svg>
+            </button>
+        </div>
+        <div class="text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
+            Copy the token now, it won't be shown again.
+        </div>
+    </div>
+    {{ end }}
+
+    {{ range .Integrations }} {{ if ne .ID.String $.New.ID }}
+    <div
+        class="flex items-center gap-1.5 border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1"
+    >
+        <input
+            type="text"
+            name="name"
+            value="{{ .Name }}"
+            placeholder="Label"
+            aria-label="Integration label"
+            hx-patch="/api/dav/{{ .ID }}"
+            hx-trigger="change"
+            hx-swap="none"
+            class="flex-1 bg-transparent border-b border-transparent focus:border-brand-sapphire outline-none text-brand-stone dark:text-neutral-200 placeholder-neutral-400"
+        />
+        <button
+            type="button"
+            aria-label="Remove integration"
+            hx-delete="/api/dav/{{ .ID }}"
+            hx-target="#integrations-list"
+            hx-swap="outerHTML"
+            hx-confirm="Remove this mail client integration?"
+            class="text-neutral-400 hover:text-red-600 cursor-pointer leading-none"
+        >
+            &times;
+        </button>
+    </div>
+    {{ end }} {{ end }}
+    {{ if and (not .Integrations) (not .New.ID) }}
+    <div class="text-neutral-500 dark:text-neutral-400 italic">
+        No mail client integrations yet.
+    </div>
+    {{ end }}
+    <button
+        type="button"
+        hx-post="/api/dav"
+        hx-target="#integrations-list"
+        hx-swap="outerHTML"
+        class="mt-1 text-left text-brand-sapphire hover:underline cursor-pointer"
+    >
+        + Add a mail client integration
+    </button>
+</div>

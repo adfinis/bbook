@@ -26,17 +26,19 @@ services:
     env_file:
       - .env
 
-  bbook-backend:
-    container_name: bbook-backend
+  bbook:
+    container_name: bbook
     build:
-      context: ../bbook-backend
+      context: ../bbook
       dockerfile: Dockerfile.dev
     restart: unless-stopped
     networks:
       - bbook-internal
-    command: ["air"]
+    # Install JS deps then run air.
+    command: ["sh", "-c", "[ -x node_modules/.bin/esbuild ] || npm ci; air"]
     volumes:
-      - ../bbook-backend:/app
+      - ../bbook:/app
+      - /app/node_modules
       - /etc/timezone:/etc/timezone
       - /etc/localtime:/etc/localtime
     env_file:
@@ -45,6 +47,8 @@ services:
       - .backend.env
     depends_on:
       bbook-db:
+        condition: service_healthy
+      bbook-keycloak:
         condition: service_healthy
 
   bbook-db:
@@ -72,23 +76,34 @@ services:
       retries: 10
       start_period: 10s
 
-  bbook-frontend:
-    container_name: bbook-frontend
-    build:
-      context: ../bbook-frontend
-      dockerfile: Dockerfile.dev
+  bbook-keycloak:
+    container_name: bbook-keycloak
+    image: quay.io/keycloak/keycloak:26.0
     restart: unless-stopped
+    command: ["start-dev", "--import-realm"]
     networks:
       - bbook-internal
+    ports:
+      - "8090:8080"
     environment:
-      - CI=true
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: http://localhost:8090
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && echo -en 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
     volumes:
-      - ../bbook-frontend:/app
-      # make sure we shadow node_modules and .next to avoid conflicts with the host
-      - /app/node_modules
-      - /app/.next
-
+      - ./keycloak/realm-bbook.json:/opt/keycloak/data/import/realm-bbook.json:ro
       - /etc/timezone:/etc/timezone
       - /etc/localtime:/etc/localtime
-    working_dir: /app
-    command: /bin/sh -c "pnpm install && pnpm dev"

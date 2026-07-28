@@ -1,0 +1,97 @@
+{{ range .Contacts }}
+<div
+    class="grid grid-cols-[var(--cols)] min-w-max lg:min-w-0 h-[var(--row-h)] border-b border-neutral-100 dark:border-neutral-800 [content-visibility:auto] hover:bg-brand-neutral dark:hover:bg-neutral-800 group/row"
+>
+    <button
+        type="button"
+        aria-label="Export contact"
+        data-id="{{ .ID }}"
+        data-vcard="{{ .VCardString }}"
+        class="py-1.5 flex items-center justify-center opacity-100 lg:opacity-0 lg:group-hover/row:opacity-100 text-neutral-400 hover:text-brand-sapphire cursor-pointer"
+    >
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <rect x="3" y="3" width="5" height="5" />
+            <rect x="16" y="3" width="5" height="5" />
+            <rect x="3" y="16" width="5" height="5" />
+            <path d="M21 16h-3a2 2 0 0 0-2 2v3" />
+            <path d="M21 21v.01" />
+            <path d="M12 7v3a2 2 0 0 1-2 2H7" />
+            <path d="M3 12h.01" />
+            <path d="M12 3h.01" />
+            <path d="M12 16v.01" />
+            <path d="M16 12h1" />
+            <path d="M21 12v.01" />
+            <path d="M12 21v-1" />
+        </svg>
+    </button>
+    <div
+        class="px-3 py-1.5 truncate min-w-0 font-medium text-brand-stone dark:text-neutral-100 sticky left-0 lg:static bg-white dark:bg-neutral-900 group-hover/row:bg-brand-neutral dark:group-hover/row:bg-neutral-800"
+        title="{{ .FullName }}"
+    >
+        {{ .FullName }}
+    </div>
+    <button
+        class="px-3 py-1.5 truncate min-w-0 text-neutral-700 dark:text-neutral-300 hover:text-brand-sapphire cursor-pointer text-left"
+        title="{{ .Org }}"
+        data-q='org:"{{ .Org }}"'
+        hx-on:click="setQuery(this.dataset.q)"
+    >
+        {{ .Org }}
+    </button>
+    <div
+        class="px-3 py-1.5 truncate min-w-0 text-neutral-700 dark:text-neutral-300"
+        title="{{ .Email }}"
+    >
+        {{- if .Email -}}
+        <a
+            href="mailto:{{ .Email }}"
+            class="cell-link"
+            >{{ .Email }}</a
+        >
+        {{- end -}}
+    </div>
+    <div
+        class="px-3 py-1.5 truncate min-w-0 text-neutral-700 dark:text-neutral-300 flex gap-3 tabular-nums"
+        title="{{- if .Phone }}{{ .Phone }}{{ end -}}{{- if and .Phone .Mobile }} | {{ end -}}{{- if .Mobile }}{{ .Mobile }}{{ end -}}"
+    >
+        {{- if .Phone }}
+        <a
+            href="tel:{{ .Phone }}"
+            class="cell-link"
+            >{{ .Phone }}</a
+        >
+        {{ end -}} {{- if .Mobile }}
+        <a
+            href="tel:{{ .Mobile }}"
+            class="cell-link"
+            >{{ .Mobile }}</a
+        >
+        {{ end -}}
+    </div>
+    <div
+        class="px-3 py-1.5 truncate min-w-0 text-neutral-500 dark:text-neutral-400"
+        title="{{ .Address }}"
+    >
+        {{ .Address }}
+    </div>
+</div>
+{{ end }}
+<!-- For each subsequent page, we render a placeholder such that when its scrolled into view, the page is fetched and the page placeholder is replaced. -->
+{{ range .Spacers }}
+<div
+    style="height: calc({{ .Count }} * var(--row-h))"
+    hx-get="/contacts?q={{ .Query | urlquery }}&page={{ .Page }}"
+    hx-trigger="intersect once"
+    hx-swap="outerHTML"
+></div>
+{{ end }}

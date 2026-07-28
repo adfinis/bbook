@@ -1,0 +1,22 @@
+{
+    "plugins": {
+        "commit-analyzer": {
+            "name": "default"
+        },
+        "ci-condition": {
+            "name": "default",
+            "options": {
+                "defaultBranch": "release"
+            }
+        },
+        "changelog-generator": {
+            "name": "default"
+        },
+        "files-updater": {
+            "names": []
+        },
+        "provider": {
+            "name": "gitlab"
+        }
+    }
+}

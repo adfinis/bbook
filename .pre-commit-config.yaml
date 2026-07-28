@@ -1,0 +1,20 @@
+---
+repos:
+  - repo: local
+    hooks:
+      - id: commitlint-docker
+        name: Commitlint (via Docker)
+        language: docker_image
+        entry: commitlint/commitlint:latest --extends @commitlint/config-conventional --edit
+        stages: [commit-msg]
+      - id: go-test
+        name: go test
+        entry: bash -c 'cd bbook && go test -count=1 ./...'
+        language: system
+        pass_filenames: false
+        files: '(\.go|go\.(mod|sum))$'
+        stages: [pre-push]
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks-docker

@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@source "./templates";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --color-brand-sapphire: #2e4b98;
+    --color-brand-biscay: #1c2e5d;
+    --color-brand-stone: #0f0f0f;
+    --color-brand-sunglow: #ffca31;
+    --color-brand-prismarine: #249087;
+    --color-brand-anthracite: #484848;
+    --color-brand-grey: #8b8b8c;
+    --color-brand-neutral: #f5f6f5;
+}
+
+.dark {
+    --color-brand-sapphire: #6b8ad1;
+    --color-brand-neutral: #fafafa;
+}
+
+@layer components {
+    .btn-header {
+        @apply inline-flex items-center justify-center h-8 w-8 text-neutral-400;
+    }
+    .cell-link {
+        @apply hover:text-brand-sapphire hover:underline;
+    }
+}
