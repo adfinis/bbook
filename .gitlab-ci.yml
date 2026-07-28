@@ -7,6 +7,7 @@ variables:
 stages:
   - history
   - lint
+  - test
   - release
 
 include:
@@ -32,6 +33,27 @@ include:
       git-depth: 0
       rules:
         - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "release"'
+
+go-test:
+  image: golang:1.26@sha256:b900de91b15b2e2953d930ece1d0ecff0a1590ab2006088d20dcf0f56f1e979f
+  stage: test
+  variables:
+    GOMODCACHE: $CI_PROJECT_DIR/.go-mod-cache
+  cache:
+    key:
+      files:
+        - bbook/go.sum
+    paths:
+      - .go-mod-cache
+  script:
+    - cd bbook
+    - go run gotest.tools/gotestsum@v1.13.0 --junitfile ../junit.xml --format testname -- -count=1 ./...
+  artifacts:
+    when: always
+    reports:
+      junit: junit.xml
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
 # Shared setup for the real and dry-run goreleaser jobs.
 .goreleaser-base:

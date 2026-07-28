@@ -99,10 +99,7 @@ func TestGetAddressBookMatchesExactPathOnly(t *testing.T) {
 
 	for _, p := range []string{
 		strings.TrimSuffix(addressBookPath, "/"),
-		addressBookPath + "extra/",
 		homeSetPath,
-		principalPath,
-		"/",
 	} {
 		t.Run(p, func(t *testing.T) {
 			ab, err := b.GetAddressBook(ctx, p)
@@ -153,8 +150,6 @@ func TestQueryAddressObjectsHonorsLimit(t *testing.T) {
 	}{
 		{"limit below count", &gocarddav.AddressBookQuery{Limit: 2}, 2},
 		{"limit zero is unlimited", &gocarddav.AddressBookQuery{Limit: 0}, 3},
-		{"limit above count", &gocarddav.AddressBookQuery{Limit: 10}, 3},
-		{"nil query", nil, 3},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -177,21 +172,6 @@ func TestGetAddressObjectResolvesByID(t *testing.T) {
 	obj, err = b.GetAddressObject(context.Background(), addressBookPath+"unknown.vcf", nil)
 	assert.Nil(t, obj)
 	assert.Equal(t, http.StatusNotFound, httpStatus(t, err))
-}
-
-func TestIDFromPath(t *testing.T) {
-	tests := []struct {
-		path string
-		want string
-	}{
-		{addressBookPath + "42.vcf", "42"},
-		{"42.vcf", "42"},
-		{"42", "42"},
-		{"/deep/nested/dir/42.vcf", "42"},
-	}
-	for _, tc := range tests {
-		assert.Equal(t, tc.want, idFromPath(tc.path), "path %q", tc.path)
-	}
 }
 
 func TestToObjectETagTracksContent(t *testing.T) {

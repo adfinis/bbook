@@ -25,16 +25,15 @@ type ContactView struct {
 
 // Given a Contact in the database, give its ContactView projection.
 func (c Contact) ToView() ContactView {
-	address := c.Street
-	if address != "" && (c.City != "" || c.PostalCode != "") {
-		address += ","
+	locality := strings.TrimSpace(c.PostalCode + " " + c.City)
+	parts := make([]string, 0, 2)
+	if c.Street != "" {
+		parts = append(parts, c.Street)
 	}
-	if c.PostalCode != "" {
-		address += " " + c.PostalCode
+	if locality != "" {
+		parts = append(parts, locality)
 	}
-	if c.City != "" {
-		address += " " + c.City
-	}
+	address := strings.Join(parts, ", ")
 
 	return ContactView{
 		ID:         c.ZohoID,

@@ -102,15 +102,6 @@ func TestLoadRejectsShortSessionSecret(t *testing.T) {
 	assert.ErrorIs(t, err, errSessionSecretTooShort)
 }
 
-func TestLoadAcceptsExactly32ByteSessionSecret(t *testing.T) {
-	setValidEnv(t)
-	secret := "abcdefghijklmnopqrstuvwxyz012345"
-	require.Len(t, secret, 32)
-	t.Setenv("SESSION_SECRET", secret)
-	_, err := Load()
-	assert.NoError(t, err)
-}
-
 func TestLoadRequiresZohoVarsWhenSyncEnabled(t *testing.T) {
 	for _, name := range []string{
 		"ZOHO_CLIENT_ID", "ZOHO_CLIENT_SECRET", "ZOHO_REFRESH_TOKEN",

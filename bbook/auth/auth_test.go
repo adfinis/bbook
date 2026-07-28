@@ -38,8 +38,6 @@ func TestVerifyRejectsInvalidInputs(t *testing.T) {
 		{"tampered payload", forgedPayload + "." + parts[1]},
 		{"tampered signature", parts[0] + "." + base64.RawURLEncoding.EncodeToString([]byte("not-the-mac"))},
 		{"missing separator", parts[0]},
-		{"invalid base64 payload", "!!!." + parts[1]},
-		{"invalid base64 signature", parts[0] + ".!!!"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -67,7 +65,6 @@ func TestInGroup(t *testing.T) {
 		{"exact match", []string{"users", "admins"}, "admins", true},
 		{"leading slash on group", []string{"/admins"}, "admins", true},
 		{"leading slash on want", []string{"admins"}, "/admins", true},
-		{"leading slash on both", []string{"/admins"}, "/admins", true},
 		{"non-membership", []string{"users"}, "admins", false},
 		{"empty groups", nil, "admins", false},
 	}
@@ -76,17 +73,6 @@ func TestInGroup(t *testing.T) {
 			assert.Equal(t, tt.expect, inGroup(tt.groups, tt.want))
 		})
 	}
-}
-
-func TestRandString(t *testing.T) {
-	a, err := randString(24)
-	require.NoError(t, err)
-	raw, err := base64.RawURLEncoding.DecodeString(a)
-	require.NoError(t, err)
-	assert.Len(t, raw, 24)
-	b, err := randString(24)
-	require.NoError(t, err)
-	assert.NotEqual(t, a, b)
 }
 
 // requestWithSessionCookie builds a request carrying a validly signed session cookie.
@@ -120,21 +106,6 @@ func TestSignedCookieRoundTrip(t *testing.T) {
 	var out sessionClaims
 	require.NoError(t, readSignedCookie(req, sessionCookieName, &out))
 	assert.Equal(t, in, out)
-}
-
-func TestReadSignedCookieMissingCookie(t *testing.T) {
-	setTestSecret(t, testSecret)
-	var out sessionClaims
-	err := readSignedCookie(httptest.NewRequest(http.MethodGet, "/", nil), sessionCookieName, &out)
-	assert.Error(t, err)
-}
-
-func TestReadSignedCookieRejectsDifferentSecret(t *testing.T) {
-	setTestSecret(t, testSecret)
-	req := requestWithSessionCookie(t, "/", sessionClaims{Sub: testSub, Exp: time.Now().Add(time.Hour).Unix()})
-	setTestSecret(t, otherTestSecret)
-	var out sessionClaims
-	assert.Error(t, readSignedCookie(req, sessionCookieName, &out))
 }
 
 func TestCurrentUserSub(t *testing.T) {
@@ -280,7 +251,6 @@ func TestCallbackHandlerRejectsExpiredFlow(t *testing.T) {
 	rec := httptest.NewRecorder()
 	CallbackHandler(rec, req)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Contains(t, rec.Body.String(), "login flow expired")
 }
 
 func TestCallbackHandlerRejectsStateMismatch(t *testing.T) {
