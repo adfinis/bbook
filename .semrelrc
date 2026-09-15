@@ -16,7 +16,7 @@
             "names": []
         },
         "provider": {
-            "name": "gitlab"
+            "name": "github"
         }
     }
 }
