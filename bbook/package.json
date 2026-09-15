@@ -8,7 +8,7 @@
     "build": "npm run build:js && npm run build:css"
   },
   "dependencies": {
-    "htmx.org": "2.0.4",
+    "htmx.org": "2.0.10",
     "qrcode-generator": "1.4.4"
   },
   "devDependencies": {
