@@ -53,7 +53,7 @@ services:
 
   bbook-db:
     container_name: bbook-db
-    image: postgres:18.3@sha256:78481659c47e862334611ccdaf7c369c986b3046da9857112f3b309114a65fb4
+    image: postgres:18.6@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
     restart: unless-stopped
     networks:
       - bbook-internal
