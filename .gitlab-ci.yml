@@ -35,7 +35,7 @@ include:
         - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "release"'
 
 go-test:
-  image: golang:1.26@sha256:b900de91b15b2e2953d930ece1d0ecff0a1590ab2006088d20dcf0f56f1e979f
+  image: golang:1.26@sha256:3c3e25a4da13fd0478eed2df1eb35a0e667094a7124d3993a6a1d30f71c17e79
   stage: test
   variables:
     GOMODCACHE: $CI_PROJECT_DIR/.go-mod-cache
@@ -57,7 +57,7 @@ go-test:
 
 # Shared setup for the real and dry-run goreleaser jobs.
 .goreleaser-base:
-  image: golang:1.26@sha256:b900de91b15b2e2953d930ece1d0ecff0a1590ab2006088d20dcf0f56f1e979f
+  image: golang:1.26@sha256:3c3e25a4da13fd0478eed2df1eb35a0e667094a7124d3993a6a1d30f71c17e79
   services:
     - docker:27-dind@sha256:aa3df78ecf320f5fafdce71c659f1629e96e9de0968305fe1de670e0ca9176ce
   variables:
