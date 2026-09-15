@@ -47,7 +47,7 @@ dockers:
       - bbook
     goos: linux
     goarch: amd64
-    dockerfile: Dockerfile
+    dockerfile: Dockerfile.prod
     image_templates:
       - "ghcr.io/adfinis/bbook:{{ .Version }}"
       - "ghcr.io/adfinis/bbook:latest"
