@@ -11,8 +11,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/lib/pq v1.12.3
-	github.com/stretchr/testify v1.11.1
-	github.com/urfave/cli/v3 v3.8.0
+	github.com/stretchr/testify v1.12.1
+	github.com/urfave/cli/v3 v3.12.0
 	golang.org/x/oauth2 v0.36.0
 )
 
@@ -44,6 +44,7 @@ require (
 	github.com/mschoch/smat v0.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	go.etcd.io/bbolt v1.4.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	google.golang.org/protobuf v1.36.7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
