@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
-      - uses: go-semantic-release/action@7b9d6cf9ab00fe5ec804448c769a91c71b814b13 # v1.9.1
+      - uses: go-semantic-release/action@2e9dc4247a6004f8377781bef4cb9dad273a741f # v1.24.1
         id: semrel
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
