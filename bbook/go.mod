@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/blevesearch/bleve/v2 v2.6.0
 	github.com/coreos/go-oidc/v3 v3.18.0
-	github.com/emersion/go-vcard v0.0.0-20230815062825-8fda7d206ec9
+	github.com/emersion/go-vcard v0.1.0
 	github.com/emersion/go-webdav v0.7.0
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0
