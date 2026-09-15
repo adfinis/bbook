@@ -7,7 +7,7 @@ networks:
 services:
   bbook-caddy:
     container_name: bbook-caddy
-    image: caddy:2.11.2@sha256:25cdc846626b62d05f6b633b9b40c2c9f6ef89b515dc76133cefd920f7dbe562
+    image: caddy:2.11.4@sha256:13ba145cba2f3e28fa801994876e4c086d1b95d5aa2a520a734765ffb6b12017
     restart: unless-stopped
     ports:
       - "80:80"
