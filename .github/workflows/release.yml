@@ -33,6 +33,22 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           allow-initial-development-versions: true
 
+  # package the chart with the released version and release
+  helm-release:
+    needs: semrel
+    if: needs.semrel.outputs.version != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: package and push chart
+        env:
+          VERSION: ${{ needs.semrel.outputs.version }}
+        run: |
+          helm dependency build charts/bbook
+          helm package charts/bbook --version "$VERSION" --app-version "$VERSION"
+          helm registry login ghcr.io -u "${{ github.actor }}" -p "${{ secrets.GITHUB_TOKEN }}"
+          helm push "bbook-$VERSION.tgz" "oci://ghcr.io/${{ github.repository }}/helm"
+
   # build binary + image + sboms for the tag semrel just created and push them
   goreleaser:
     needs: semrel

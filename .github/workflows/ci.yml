@@ -54,6 +54,15 @@ jobs:
           name: junit
           path: junit.xml
 
+  helm-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: |
+          helm dependency build charts/bbook
+          helm lint charts/bbook -f charts/bbook/ci/default-values.yaml
+          helm template bbook charts/bbook -f charts/bbook/ci/default-values.yaml > /dev/null
+
   goreleaser-dryrun:
     if: github.base_ref == 'release'
     runs-on: ubuntu-latest
