@@ -73,6 +73,26 @@ ingress:
   #    hosts:
   #      - bbook.local
 
+httpRoute:
+  # -- create an HTTPRoute attaching bbook to an existing Gateway API gateway, as an alternative to the ingress
+  enabled: false
+  # -- HTTPRoute annotations
+  annotations: {}
+  # -- hostnames served by the route
+  hosts:
+    - bbook.local
+  # -- gateways to attach to, e.g. {name: infra, namespace: infra-kgateway}
+  parentRefs: []
+  # -- path match for the route
+  matches:
+    path:
+      type: PathPrefix
+      value: /
+  # -- optional HTTPRoute rule timeouts
+  timeouts: {}
+  # -- optional HTTPRoute rule filters
+  filters: []
+
 # -- Pod resources to define
 resources: {}
   # limits:

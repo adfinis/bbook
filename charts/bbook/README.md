@@ -2,7 +2,7 @@
 
 ![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.1.2](https://img.shields.io/badge/AppVersion-0.1.2-informational?style=flat-square)
 
-Adfinis contact address book, syncing contacts from Zoho CRM to a searchable web page and a read-only CardDAV endpoint
+Contact address book, syncing contacts from Zoho CRM to a searchable web page and a read-only CardDAV endpoint
 
 **Homepage:** <https://github.com/adfinis/bbook>
 
@@ -52,8 +52,15 @@ Kubernetes: `>= 1.21.0`
 | externalDatabase.host | string | `""` | database host, may include a port (host:5432) |
 | externalDatabase.password | string | `""` | database password (stored in the Secret) |
 | externalDatabase.username | string | `"bbook"` | database user name |
-| extraObjects | list | `[]` | extra Kubernetes objects deployed with the chart, rendered through tpl. Useful for e.g. an ExternalSecret + SecretStore providing the existingSecret. |
+| extraObjects | list | `[]` | extra Kubernetes objects deployed with the chart, rendered through tpl. |
 | fullnameOverride | string | `""` | fullnameOverride configuration |
+| httpRoute.annotations | object | `{}` | HTTPRoute annotations |
+| httpRoute.enabled | bool | `false` | create an HTTPRoute attaching bbook to an existing Gateway API gateway, as an alternative to the ingress |
+| httpRoute.filters | list | `[]` | optional HTTPRoute rule filters |
+| httpRoute.hosts | list | `["bbook.local"]` | hostnames served by the route |
+| httpRoute.matches | object | `{"path":{"type":"PathPrefix","value":"/"}}` | path match for the route |
+| httpRoute.parentRefs | list | `[]` | gateways to attach to, e.g. {name: infra, namespace: infra-kgateway} |
+| httpRoute.timeouts | object | `{}` | optional HTTPRoute rule timeouts |
 | image.pullPolicy | string | `"IfNotPresent"` | pullPolicy to use |
 | image.repository | string | `"ghcr.io/adfinis/bbook"` | repository where the image is located |
 | image.tag | string | `""` | Overrides the image tag whose default is the chart appVersion. |
@@ -72,7 +79,7 @@ Kubernetes: `>= 1.21.0`
 | postgresql.auth.username | string | `"bbook"` | PostgreSQL user name |
 | postgresql.enabled | bool | `false` | deploy the bundled PostgreSQL (CloudPirates postgres chart). If disabled, externalDatabase is used instead. |
 | postgresql.nameOverride | string | `"postgresql"` |  |
-| replicaCount | int | `1` | number of replicas to launch. Note: every replica runs its own Zoho sync job and in-memory search index, so more than one replica duplicates the sync work against Zoho CRM. |
+| replicaCount | int | `1` | number of replicas to launch. Note: every replica runs its own Zoho sync job and search index |
 | resources | object | `{}` | Pod resources to define |
 | securityContext | object | `{}` | Container securityContext configuration |
 | service.port | int | `8081` | port where the service listens to |
