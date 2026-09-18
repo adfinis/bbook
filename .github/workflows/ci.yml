@@ -54,6 +54,21 @@ jobs:
           name: junit
           path: junit.xml
 
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bbook
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: bbook/go.mod
+          cache-dependency-path: bbook/go.sum
+      - run: npm ci
+      - run: npm run build
+      - run: go build ./...
+
   helm-lint:
     runs-on: ubuntu-latest
     steps:
