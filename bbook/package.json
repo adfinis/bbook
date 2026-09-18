@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:js": "esbuild node_modules/htmx.org/dist/htmx.js --minify --outfile=static/assets/htmx.js && esbuild node_modules/qrcode-generator/qrcode.js --minify --outfile=static/assets/qrcode.js",
+    "build:js": "esbuild node_modules/htmx.org/dist/htmx.js --minify --outfile=static/assets/htmx.js && esbuild node_modules/qrcode-generator/dist/qrcode.js --minify --outfile=static/assets/qrcode.js",
     "build:css": "tailwindcss -i tailwind.input.css -o static/assets/tailwind.css --minify",
     "build": "npm run build:js && npm run build:css"
   },
