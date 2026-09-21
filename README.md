@@ -1,6 +1,8 @@
 # bbook
 
-bbook is the internal Adfinis contact address book. It fetches customer contacts from Zoho CRM and makes them available in two ways: a searchable web page, and a read-only CardDAV address bbook that can be added to mail clients.
+bbook is the internal Adfinis contact address book. It fetches customer contacts from Zoho CRM and makes them available in three ways: a searchable web page, for download, and a read-only CardDAV address book that can be added to mail clients.
+
+![](./resources/homepage.gif)
 
 ## Components
 
@@ -11,6 +13,7 @@ The application is a single Go binary that runs an HTTP server. Around it:
 * **OIDC** handles login for the web interface. In the docker-compose there is a preconfigured Keycloak for development.
 * **Search** runs in memory. The index is rebuilt from the database on startup and queried by the web interface and the CardDAV endpoint.
 * **CardDAV** is served under `/api/dav`. Mail clients authenticate with per-client tokens that users generate from the UI.
+* **Helm chart** for deployment on a Kubernetes cluster.
 
 ## Development
 Most environment variables are already filled out for development in [`.env`](docker/.env), [`.db.env`](docker/.db.env) and [`.backend.env`](docker/.backend.env). Check the files for additional configuration options.
