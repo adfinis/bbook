@@ -7,7 +7,7 @@ networks:
 services:
   bbook-caddy:
     container_name: bbook-caddy
-    image: caddy:2.11.4@sha256:0c994536bddb66445885237f1a5dcc1916bccea922661c76b4e9fc24061f9b52
+    image: caddy:2.11.6@sha256:3422ce6de165df66534f9b9ba50efaf457114ec961763cc52f5dbdaac2972d73
     restart: unless-stopped
     ports:
       - "80:80"
@@ -78,7 +78,7 @@ services:
 
   bbook-keycloak:
     container_name: bbook-keycloak
-    image: quay.io/keycloak/keycloak:26.7@sha256:37dbaf6f0722c9ec246335f36e1ef8b2e6cb960f7c27e0d8c615121a3d475a85
+    image: quay.io/keycloak/keycloak:26.8@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc
     restart: unless-stopped
     command: ["start-dev", "--import-realm"]
     networks:
