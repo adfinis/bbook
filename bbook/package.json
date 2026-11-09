@@ -12,7 +12,7 @@
     "qrcode-generator": "2.0.4"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "4.3.3",
+    "@tailwindcss/cli": "4.3.4",
     "esbuild": "0.28.2"
   }
 }
