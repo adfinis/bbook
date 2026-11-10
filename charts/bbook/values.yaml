@@ -92,6 +92,16 @@ httpRoute:
   timeouts: {}
   # -- optional HTTPRoute rule filters
   filters: []
+  redirect:
+    # -- create a second HTTPRoute redirecting plain HTTP requests for the same hosts to HTTPS
+    enabled: false
+    # -- HTTP listeners to attach the redirect to, e.g. {name: infra, namespace: infra-kgateway, sectionName: http}
+    parentRefs: []
+    # -- status code of the redirect
+    statusCode: 308
+  # -- source CIDRs allowed to reach the route, empty allows all. Creates a kgateway TrafficPolicy and needs kgateway as the gateway implementation
+  allowlist: []
+  #  - 10.0.0.0/8
 
 # -- Pod resources to define
 resources: {}
