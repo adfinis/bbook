@@ -54,12 +54,16 @@ Kubernetes: `>= 1.21.0`
 | externalDatabase.username | string | `"bbook"` | database user name |
 | extraObjects | list | `[]` | extra Kubernetes objects deployed with the chart, rendered through tpl. |
 | fullnameOverride | string | `""` | fullnameOverride configuration |
+| httpRoute.allowlist | list | `[]` | source CIDRs allowed to reach the route, empty allows all. Creates a kgateway TrafficPolicy and needs kgateway as the gateway implementation |
 | httpRoute.annotations | object | `{}` | HTTPRoute annotations |
 | httpRoute.enabled | bool | `false` | create an HTTPRoute attaching bbook to an existing Gateway API gateway, as an alternative to the ingress |
 | httpRoute.filters | list | `[]` | optional HTTPRoute rule filters |
 | httpRoute.hosts | list | `["bbook.local"]` | hostnames served by the route |
 | httpRoute.matches | object | `{"path":{"type":"PathPrefix","value":"/"}}` | path match for the route |
 | httpRoute.parentRefs | list | `[]` | gateways to attach to, e.g. {name: infra, namespace: infra-kgateway} |
+| httpRoute.redirect.enabled | bool | `false` | create a second HTTPRoute redirecting plain HTTP requests for the same hosts to HTTPS |
+| httpRoute.redirect.parentRefs | list | `[]` | HTTP listeners to attach the redirect to, e.g. {name: infra, namespace: infra-kgateway, sectionName: http} |
+| httpRoute.redirect.statusCode | int | `308` | status code of the redirect |
 | httpRoute.timeouts | object | `{}` | optional HTTPRoute rule timeouts |
 | image.pullPolicy | string | `"IfNotPresent"` | pullPolicy to use |
 | image.repository | string | `"ghcr.io/adfinis/bbook"` | repository where the image is located |
