@@ -53,7 +53,7 @@ services:
 
   bbook-db:
     container_name: bbook-db
-    image: postgres:18.6@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6
+    image: postgres:18.6@sha256:e3d24f6906d0760bf4da0dae872415391ededefad23fd471c47dc53b0ddf3c42
     restart: unless-stopped
     networks:
       - bbook-internal
@@ -78,7 +78,7 @@ services:
 
   bbook-keycloak:
     container_name: bbook-keycloak
-    image: quay.io/keycloak/keycloak:26.8@sha256:a78d6b79572168cb25886b80a8b5b8d4ed4390743e3eecb810538683e209dd6b
+    image: quay.io/keycloak/keycloak:26.8@sha256:723b1d6e254c0fc96d5cffec860c7e0744d6a3277822b865bb538cf891575e41
     restart: unless-stopped
     command: ["start-dev", "--import-realm"]
     networks:
