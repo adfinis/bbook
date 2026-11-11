@@ -4,5 +4,17 @@
     "github>adfinis/renovate-config:app",
     "github>adfinis/renovate-config:quiet",
     "github>adfinis/renovate-config:lockfile-maintenance"
+  ],
+  "packageRules": [
+    {
+      "description": "the chart image tag defaults to the chart appVersion, a pinned digest renders an invalid image reference",
+      "matchManagers": [
+        "helm-values"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/adfinis/bbook"
+      ],
+      "enabled": false
+    }
   ]
 }
