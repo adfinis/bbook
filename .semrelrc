@@ -6,7 +6,7 @@
         "ci-condition": {
             "name": "default",
             "options": {
-                "defaultBranch": "release"
+                "defaultBranch": "main"
             }
         },
         "changelog-generator": {

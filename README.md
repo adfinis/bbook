@@ -29,4 +29,4 @@ docker compose up
 
 ## CI and releases
 
-To create a new release, merge to the `release` branch.
+To create a new release, run the `Semantic Release` workflow manually on `main`. It creates the tag, which triggers the `Release` workflow to build and publish the artifacts.
