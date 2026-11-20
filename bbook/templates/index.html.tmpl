@@ -206,6 +206,19 @@
                 );
             });
 
+            for (const type of ["mouseout", "focusout"]) {
+                document.addEventListener(type, (e) => {
+                    const group = e.target.closest?.(".group");
+                    if (!group?.querySelector("[data-once]")) return;
+                    setTimeout(() => {
+                        if (group.matches(":hover, :focus-within")) return;
+                        group
+                            .querySelectorAll("[data-once]")
+                            .forEach((el) => el.remove());
+                    });
+                });
+            }
+
             // HTML-escape a value used inside text content or an attribute.
             // (Used by renderFavouriteChip for the localStorage-driven chips.)
             function esc(s) {
